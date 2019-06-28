@@ -1,2 +1,2 @@
 # VR-Crosswalk
-Source code of the omnidirectional treadmill "VR-Crosswalk"
+Source code and 3D files of the omnidirectional treadmill "VR-Crosswalk"
