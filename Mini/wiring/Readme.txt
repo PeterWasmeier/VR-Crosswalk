@@ -1,4 +1,4 @@
-In this folder, you will find the wiring and PCBs of the "VR-Crosswalk-Mini".
+In this folder, there is the wiring and the PCBs of the "VR-Crosswalk-Mini".
 
 To open these files, you have to use the program "fritzing".
 
