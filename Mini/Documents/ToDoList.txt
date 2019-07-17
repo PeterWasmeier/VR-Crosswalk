@@ -1,0 +1,16 @@
+Some Notes from Peter Wasmeier for stuff to improve
+
+- den Arduino anders herum platzieren (180° gedreht) da sonst der USB Anschluß nicht genutzt werden kann (Motor im Weg!)
+* die 4er Löcher in den unteren Trittplatten müssen 0,1mm größer werden
+-die 3mm Löcher in der Platine müssen auch wirklich 3mm haben sonst lässt sich die Platine nicht mit der PCB Grundplatte verschrauben
+*es muss ein Kabelloch für den Encoder rein
+-die PCB Platte doch mit 4mm dicke? Weil es wakelt zu viel, oder aber eine Unterlegscheibe unter den SK8. Vorher aber prüfen ob die Lötpunkte unter der Trittplattenplatine ausreichend sind um den Millimeter zu überbrücken zwischen Alu-Trittplatte und Base.
+*die 5er Schraubenlöcher der SK Teile kleiner, damit dort ein Gewinde rein kann
+*das Loch für die Stepper um 0,1mm größer machen
+- prüfen ob der kleine Servo mehr als nur 180° beherrscht, sonst lassen sich die Beine nicht kreuzen
+- die Formeln der Platte auf vier Quadranten verteilen
+ 
+
+Legende:
+- noch zu tun
+* bereits erledigt
