@@ -1,0 +1,6 @@
+Die Belegung der Anschlüsse ist:
+- sw(black) GND, 
+- rt(red) VCC, 
+- ws(white) PIN A, 
+- gn(green) PIN B.
+PIN A und PIN B sind Open Collector Ausgänge, also PullUp.Widerstände nicht vergessen zu programmieren.

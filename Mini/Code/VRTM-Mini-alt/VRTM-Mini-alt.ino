@@ -2,7 +2,6 @@
 #include <nI2C.h>
 #include <nTWI.h>
 #include <queue.h>
-
 #include <Servo.h>
 
 /* ****************************************** D I V E R S E - K O N S T A N T E N *******************************************
@@ -15,18 +14,26 @@ typedef struct
   bool PIN_STEPPER_COIL1_MINUS;
   bool PIN_STEPPER_COIL2_MINUS;
 } tStepperPins;
+/*
 //                                          PIN_STEPPER_COIL1_PLUS, PIN_STEPPER_COIL2_PLUS, PIN_STEPPER_COIL1_MINUS,  PIN_STEPPER_COIL2_MINUS
-const tStepperPins HorizontalAxisSteps[] = {{HIGH,                   LOW,                    LOW,                      LOW},
-                                            {LOW,                    HIGH,                   LOW,                      LOW},
-                                            {LOW,                    LOW,                    HIGH,                     LOW},
-                                            {LOW,                    LOW,                    LOW,                      HIGH}};
-                                    
+const tStepperPins HorizontalAxisSteps[] = {{LOW,                   LOW,                    LOW,                      HIGH},
+                                            {LOW,                   LOW,                    HIGH,                     LOW},
+                                            {LOW,                   HIGH,                   LOW,                      LOW},
+                                            {HIGH,                  LOW,                    LOW,                      LOW}};
+*/                                    
+//                                          PIN_STEPPER_COIL1_PLUS, PIN_STEPPER_COIL2_PLUS, PIN_STEPPER_COIL1_MINUS,  PIN_STEPPER_COIL2_MINUS
+const tStepperPins HorizontalAxisSteps[] = {{HIGH,                  LOW,                    LOW,                      LOW},
+                                            {LOW,                   HIGH,                   LOW,                      LOW},
+                                            {LOW,                   LOW,                    HIGH,                     LOW},
+                                            {LOW,                   LOW,                    LOW,                      HIGH}};
+
 // Position of the GY271 sensors on each footplate:
 const double GY271_Sensor_X[] = {         -(40.64/2),          0.0,          (40.64/2),        -(40.64/2),          0.0,         (40.64/2) };
 const double GY271_Sensor_Y[] = { -(143.149/2)+21.23, -(143.149/2), -(143.149/2)+21.23, (143.149/2)-22.86,  (143.149/2), (143.149/2)-22.86 };
 
-const char MOTOR_LOW_SPEED           = 30;
-const char MOTOR_HIGH_SPEED          = 70;             // Der Motor darf maximal 6V erhalten
+const char MOTOR_BREAK_SPEED         = 110;
+const char MOTOR_LOW_SPEED           = 0;
+const char MOTOR_HIGH_SPEED          = 80;             // Der Motor darf maximal 6V erhalten
                                                        // Es liegen am Motortreiber "L298N" 12V extern an. Er besitzt 1,4V Verlust
                                                        // D.h. ein 
                                                        // PWM mit   0 = 0V
@@ -42,17 +49,17 @@ const char PIN_BASEPLATE_ENCODER_B   = 3;   // PWM,INT Plattform Encoder: INT In
 const char PIN_STEPPER_COIL2_PLUS    = 4;   //         Stepper Driver for wire pair: Green/Black (IN2), The stepper is always enabled
 const char PIN_RESERVE_1             = 5;   // PWM
 const char PIN_BASEPLATE_MOTOR_ENABLE= 6;   // PWM     Plattform Motor: PWM Signal für Geschwindigkeit (Achtung: der Motor verträgt 6V)
-const char PIN_BASEPLATE_MOTOR_MINUS = 7;   //         Plattform Motor: Richtung Minus/Counter clockwise
-const char PIN_BASEPLATE_MOTOR_PLUS  = 8;   //         Plattform Motor: Richtung Plus/Clockwise
+const char PIN_BASEPLATE_MOTOR1_PLUS = 7;   //         Plattform Motor: Richtung Plus/Clockwise
+const char PIN_BASEPLATE_MOTOR1_MINUS= 8;   //         Plattform Motor: Richtung Minus/Counter clockwise
 const char PIN_FOOTPRINT_RIGHT_SERVO = 9;   // PWM     Trittplatte links: Servo position links, 1ms..2ms=-90°..+90°
 const char PIN_FOOTPRINT_LEFT_SERVO  = 10;  // PWM     Trittplatte rechts: Servo position rechts, 1ms..2ms=-90°..+90°
 const char PIN_RESERVE_2             = 11;  // PWM
 const char PIN_STEPPER_COIL1_PLUS    = 12;  //         Stepper Driver for wire pair: red/blue (IN4), The stepper is always enabled
 const char PIN_STEPPER_COIL1_MINUS   = 13;  //         Stepper Driver for wire pair: red/blue (IN3), The stepper is always enabled
-const char PIN_JOYSTICK_BUTTON       = A0;  // A0      
+const char PIN_REFERENCE_SWITCH      = A0;  // A0      
 const char PIN_STEPPER_COIL2_MINUS   = A1;  // A1      Stepper Driver for wire pair: Green/Black (IN1), The stepper is always enabled
-const char PIN_JOYSTICK_X            = A2;  // A2
-const char PIN_JOYSTICK_Y            = A3;  // A3
+const char PIN_BASEPLATE_MOTOR2_PLUS = A2;  // A2
+const char PIN_BASEPLATE_MOTOR2_MINUS= A3;  // A3
 const char PIN_I2C_BUS_SDA           = A4;  // A4      I2C BUS: SDA
 const char PIN_I2C_BUS_SCL           = A5;  // A5      I2C BUS: SCL
 
@@ -118,12 +125,20 @@ typedef struct {
   volatile int iCurrentPosition;      // aktueller Pulszähler der Plattform. Eine Umdrehung sind 600x4 = 2400 Pulse. Gezählt wird von 0...1199 Pulse. Das entspricht 0..359 Grad
   volatile char cCurrentState;        // aktueller "State" von PIN A und PIN B des Encoders. Wird f�r den Interrupt benötigt
   volatile int iDestinationPosition;  // Zielposition der Plattform. Die Motoren werden die Plattform in Position bringen.
+  volatile int iPreviousDestinationPosition;
   volatile tStepper HorizontalAxis;
+  volatile long lCurrentSpeed;
+  volatile long lPreviousSpeed;
+  volatile byte bMoving;
 } tBasePlate;
 
 /* *********************************************  G L O B A L    V A R I A B L E S ******************************************
    ************************************************************************************************************************** */
-volatile bool bDoDrycycle;
+volatile byte PID_KI=0;
+
+volatile byte bPWM;
+byte bPreviousPWM;
+long lPreviousSpeed;
 byte HorizontalAxisIndex;
 byte bSTOP_CurrentTCA9548A;
 byte bSTOP_CurrentTCA9548A_Port;
@@ -193,10 +208,7 @@ unsigned long ulCycles;
 void fBasePlate_Move () {
   int iDeltaMinus;
   int iDeltaPlus;
-  byte bPWM;
-  return;
-  bPWM = MOTOR_HIGH_SPEED;
-  if (BasePlate.iDestinationPosition!=BasePlate.iCurrentPosition) { 
+  if ((BasePlate.iDestinationPosition!=BasePlate.iCurrentPosition) && (BasePlate.iPreviousDestinationPosition!=BasePlate.iDestinationPosition)) { 
     // die Achse muss sich in Bewegung setzen
     // Zunächst ermitteln, ob sich diese links oder rechtsherum drehen muss.
     // Problem: es gibt einen Überlauf von 1199 auf 0 und umgekehrt.
@@ -210,23 +222,36 @@ void fBasePlate_Move () {
     }
     if (iDeltaPlus<iDeltaMinus) { 
       // die Plattform muss sich rechts-herum drehen
+      bPWM=PID_KI;
+      digitalWrite (PIN_BASEPLATE_MOTOR1_MINUS, LOW);
+      digitalWrite (PIN_BASEPLATE_MOTOR1_PLUS, HIGH);
+      digitalWrite (PIN_BASEPLATE_MOTOR2_MINUS, LOW);
+      digitalWrite (PIN_BASEPLATE_MOTOR2_PLUS, HIGH);
       analogWrite (PIN_BASEPLATE_MOTOR_ENABLE, bPWM);
-      digitalWrite (PIN_BASEPLATE_MOTOR_MINUS, LOW);
-      digitalWrite (PIN_BASEPLATE_MOTOR_PLUS, HIGH);
+      BasePlate.bMoving=1;
+      return;
     }
-    else { 
+    else 
+    if (iDeltaMinus<iDeltaPlus) {
       // die Plattform muss sich links-herum drehen
+      bPWM=PID_KI;
+      digitalWrite (PIN_BASEPLATE_MOTOR1_PLUS, LOW);
+      digitalWrite (PIN_BASEPLATE_MOTOR1_MINUS, HIGH);
+      digitalWrite (PIN_BASEPLATE_MOTOR2_PLUS, LOW);
+      digitalWrite (PIN_BASEPLATE_MOTOR2_MINUS, HIGH);
       analogWrite (PIN_BASEPLATE_MOTOR_ENABLE, bPWM);
-      digitalWrite (PIN_BASEPLATE_MOTOR_PLUS, LOW);
-      digitalWrite (PIN_BASEPLATE_MOTOR_MINUS, HIGH);
+      BasePlate.bMoving=1;
+      return;
     }
   }
-  else { 
-    // Plattform ist bereits in Position, also die Bremse betätigen:
-    digitalWrite (PIN_BASEPLATE_MOTOR_MINUS, LOW);
-    digitalWrite (PIN_BASEPLATE_MOTOR_PLUS, LOW);
-    analogWrite (PIN_BASEPLATE_MOTOR_ENABLE, 255);
-  }
+  // Plattform ist bereits in Position, also die Bremse betätigen:
+  BasePlate.bMoving=0;
+  BasePlate.iPreviousDestinationPosition = BasePlate.iDestinationPosition;
+  digitalWrite (PIN_BASEPLATE_MOTOR1_MINUS, HIGH);
+  digitalWrite (PIN_BASEPLATE_MOTOR1_PLUS, HIGH);
+  digitalWrite (PIN_BASEPLATE_MOTOR2_MINUS, HIGH);
+  digitalWrite (PIN_BASEPLATE_MOTOR2_PLUS, HIGH);
+  analogWrite (PIN_BASEPLATE_MOTOR_ENABLE, MOTOR_BREAK_SPEED);      
 }
 
 
@@ -301,6 +326,9 @@ void fBasePlate_GetCurrentState () {
 */
 void fBasePlate_Interrupt () {
   char cPreviousState;
+  
+  BasePlate.lCurrentSpeed++;
+  
   cPreviousState = BasePlate.cCurrentState;
   fBasePlate_GetCurrentState ();
   if (cPreviousState < BasePlate.cCurrentState) {
@@ -343,11 +371,16 @@ void fBasePlate_Init () {
   Serial.println ("fBasePlate_Init");
   pinMode (PIN_BASEPLATE_ENCODER_A, INPUT_PULLUP);
   pinMode (PIN_BASEPLATE_ENCODER_B, INPUT_PULLUP);
-  pinMode (PIN_BASEPLATE_MOTOR_PLUS, OUTPUT);
-  pinMode (PIN_BASEPLATE_MOTOR_MINUS, OUTPUT);
+  pinMode (PIN_BASEPLATE_MOTOR1_PLUS, OUTPUT);
+  pinMode (PIN_BASEPLATE_MOTOR1_MINUS, OUTPUT);
+  pinMode (PIN_BASEPLATE_MOTOR2_PLUS, OUTPUT);
+  pinMode (PIN_BASEPLATE_MOTOR2_MINUS, OUTPUT);
   pinMode (PIN_BASEPLATE_MOTOR_ENABLE, OUTPUT);
-  digitalWrite (PIN_BASEPLATE_MOTOR_PLUS, LOW);
-  digitalWrite (PIN_BASEPLATE_MOTOR_MINUS, LOW);
+  pinMode (PIN_REFERENCE_SWITCH, INPUT_PULLUP);
+  digitalWrite (PIN_BASEPLATE_MOTOR1_PLUS, LOW);
+  digitalWrite (PIN_BASEPLATE_MOTOR1_MINUS, LOW);
+  digitalWrite (PIN_BASEPLATE_MOTOR2_PLUS, LOW);
+  digitalWrite (PIN_BASEPLATE_MOTOR2_MINUS, LOW);
   digitalWrite (PIN_BASEPLATE_MOTOR_ENABLE, LOW);
   analogWrite (PIN_BASEPLATE_MOTOR_ENABLE, 0);
   pinMode (PIN_STEPPER_COIL1_PLUS, OUTPUT);
@@ -358,9 +391,10 @@ void fBasePlate_Init () {
   digitalWrite (PIN_STEPPER_COIL1_MINUS,LOW);
   digitalWrite (PIN_STEPPER_COIL2_PLUS,LOW);
   digitalWrite (PIN_STEPPER_COIL2_MINUS,LOW);
- fBasePlate_GetCurrentState ();
-  BasePlate.iCurrentPosition = 0;
-  BasePlate.iDestinationPosition = 0;
+  fBasePlate_GetCurrentState ();
+  BasePlate.HorizontalAxis.CurrentPosition=600;
+  BasePlate.iCurrentPosition = 600;
+  BasePlate.iDestinationPosition = 600;
   attachInterrupt (digitalPinToInterrupt(PIN_BASEPLATE_ENCODER_A), fBasePlate_Interrupt, CHANGE);
   attachInterrupt (digitalPinToInterrupt(PIN_BASEPLATE_ENCODER_B), fBasePlate_Interrupt, CHANGE);
 }
@@ -437,8 +471,7 @@ void fGY271_Write (byte bRegister, byte bValue) {
   if (bStatus=nI2C->Write (I2C_GY271, bRegister, &bValue, (uint32_t)1)!=0) fSTOP_I2C (I2C_GY271.device_address,bStatus,"fGY271_Write");
 }
 
-void fGY271_Callback (const uint8_t bStatus)
-{
+void fGY271_Callback (const uint8_t bStatus) {
   int x, y, z;
   long lx, ly, lz;
   byte s;
@@ -478,8 +511,7 @@ void fGY271_Callback (const uint8_t bStatus)
   pGY271_Callback_Sensor->Valid=1;
 }
 
-void fGY271_Read_Value (tGY271 *pGY271)
-{
+void fGY271_Read_Value (tGY271 *pGY271) {
   byte bStatus;
   pGY271_Callback_Sensor = pGY271;
   pGY271->Valid=0;
@@ -774,12 +806,13 @@ void fFootprint_Calculate (tFootprint* Footprint) {
 
 /* Function: fFootprint_Init
    Description:
-     Initialisiert die gesamte Trittplatte.
- */
+     Initialisiert die gesamte Trittplatte. */
 void fFootprint_Init () {
   // Servos vorbereiten:
   FootprintLeft.sServo.attach (PIN_FOOTPRINT_LEFT_SERVO);
   FootprintRight.sServo.attach (PIN_FOOTPRINT_RIGHT_SERVO);
+  FootprintLeft.sServo.writeMicroseconds (1500);
+  FootprintRight.sServo.writeMicroseconds (1500);
 
   // VL6180X Sensoren initialisieren:
   // Left footprint VL6180X init:
@@ -800,8 +833,7 @@ void fFootprint_Init () {
   fGY271_Init (FootprintRight.I2C_TCA9548A_Lower, 4);
 }
 
-void fSTOP_I2C (byte bI2CAddress, byte bI2CResult, char *pFunction)
-{
+void fSTOP_I2C (byte bI2CAddress, byte bI2CResult, char *pFunction) {
   Serial.println ("SYSTEM STOPPED BECAUSE OF I2C ERROR.");
   Serial.print   ("Current TCA9548A: 0x");  Serial.println (bSTOP_CurrentTCA9548A,HEX);
   Serial.print   ("TCA9548A Port   : 0x");  Serial.println (bSTOP_CurrentTCA9548A_Port);
@@ -830,8 +862,7 @@ void fSTOP_I2C (byte bI2CAddress, byte bI2CResult, char *pFunction)
   };
 }
 
-void fSTOP (char *pMessage, char *pFunction)
-{
+void fSTOP (char *pMessage, char *pFunction) {
   Serial.println ("SYSTEM STOPPED BECAUSE OF INTERNAL ERROR.");
   Serial.print   ("Message : ");  Serial.println (pMessage);
   Serial.print   ("Function: ");  Serial.println (pFunction);
@@ -842,26 +873,23 @@ void fSTOP (char *pMessage, char *pFunction)
   };
 }
 
-// fCalculate_Intersection
-// ***********************
-// Calculate the intersection of two lines.
-// a1 = X Position of the Sensor #1
-// b1 = Y Position of the Sensor #1
-// a2 = X Position of the Sensor #2
-// b2 = Y Position of the Sensor #2
-// S1x= X Direction where the sensor #1 is pointing to
-// S1y= Y Direction where the sensor #1 is pointing to
-// S2x= X Direction where the sensor #2 is pointing to
-// S2y= Y Direction where the sensor #2 is pointing to
-// RESULT:
-// *x = X coordinate where the two lines cross each other
-// *y = y coordinate where the two lines cross each other
-// return value: TRUE = The result is valid
-//               FALSE = Ignore the result, error in calculation
-bool fCalculate_Intersection (double a1, double b1, double S1x, double S1y,
-                              double a2, double b2, double S2x, double S2y,
-                              tPosition *Position)
-{
+/* fCalculate_Intersection
+   ***********************
+   Calculate the intersection of two lines.
+   a1 = X Position of the Sensor #1
+   b1 = Y Position of the Sensor #1
+   a2 = X Position of the Sensor #2
+   b2 = Y Position of the Sensor #2
+   S1x= X Direction where the sensor #1 is pointing to
+   S1y= Y Direction where the sensor #1 is pointing to
+   S2x= X Direction where the sensor #2 is pointing to
+   S2y= Y Direction where the sensor #2 is pointing to
+   RESULT:
+   *x = X coordinate where the two lines cross each other
+   *y = y coordinate where the two lines cross each other
+   return value: TRUE = The result is valid
+                 FALSE = Ignore the result, error in calculation */
+bool fCalculate_Intersection (double a1, double b1, double S1x, double S1y, double a2, double b2, double S2x, double S2y, tPosition *Position) {
   double C1;
   double C2;
   double M1;
@@ -897,16 +925,14 @@ bool fCalculate_Intersection (double a1, double b1, double S1x, double S1y,
   return true;
 }
 
-// fCalculate_Distance
-// ~~~~~~~~~~~~~~~~~~~
-// Calculate the distance between two points
-double fCalculate_Distance (double x1, double y1, double x2, double y2)
-{
+/* fCalculate_Distance
+   ~~~~~~~~~~~~~~~~~~~
+   Calculate the distance between two points */
+double fCalculate_Distance (double x1, double y1, double x2, double y2) {
   return sqrt( ((x1-x2)*(x1-x2))+((y1-y2)*(y1-y2)) );
 }
 
-bool fCalculate_GY271_CenterOfFootplate (tFootprint *Footplate)
-{
+bool fCalculate_GY271_CenterOfFootplate (tFootprint *Footplate) {
   tPosition Intersection_S0S1;
   tPosition Intersection_S0S2;
   tPosition Intersection_S1S2;
@@ -1025,12 +1051,8 @@ bool fCalculate_GY271_CenterOfFootplate (tFootprint *Footplate)
   return true;
 }
 
-void fReceiveCommandsFromPC ()
-{
-  int i;
+void fReceiveCommandsFromPC () {
   char cCommandFromPC;
-  byte bPWM;
-  bPWM = MOTOR_HIGH_SPEED;
   // Look for commands from PC:
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~
   if (Serial.available())
@@ -1038,130 +1060,72 @@ void fReceiveCommandsFromPC ()
     cCommandFromPC=Serial.read ();
     switch (cCommandFromPC)
     {
-      case '1': // Reset right Footprint
-                FootprintRight.GY271[0].SetOffset=1;
-                FootprintRight.GY271[1].SetOffset=1;
-                FootprintRight.GY271[2].SetOffset=1;
-                FootprintRight.GY271[3].SetOffset=1;
-                FootprintRight.GY271[4].SetOffset=1;
-                FootprintRight.GY271[5].SetOffset=1;
-                break;
-      case '2': // Reset Offset
-                for (i=0;i<6;i++)
-                {
-                  FootprintRight.GY271[i].Offset.X=0;
-                  FootprintRight.GY271[i].Offset.Y=0;
-                  FootprintRight.GY271[i].Offset.Z=0;
-                }
-                break;
-      case '3': // die Plattform muss sich rechts-herum drehen
-                analogWrite (PIN_BASEPLATE_MOTOR_ENABLE, 70);
-                digitalWrite (PIN_BASEPLATE_MOTOR_MINUS, LOW);
-                digitalWrite (PIN_BASEPLATE_MOTOR_PLUS, HIGH);
-                delay (800);
-                // Stop motor:
-                digitalWrite (PIN_BASEPLATE_MOTOR_MINUS, LOW);
-                digitalWrite (PIN_BASEPLATE_MOTOR_PLUS, LOW);
-                analogWrite (PIN_BASEPLATE_MOTOR_ENABLE, 0);
-                break;
-      case '4': // die Plattform muss sich links-herum drehen
-                analogWrite (PIN_BASEPLATE_MOTOR_ENABLE, 70);
-                digitalWrite (PIN_BASEPLATE_MOTOR_PLUS, LOW);
-                digitalWrite (PIN_BASEPLATE_MOTOR_MINUS, HIGH);
-                delay (800);
-                // Stop motor:
-                digitalWrite (PIN_BASEPLATE_MOTOR_MINUS, LOW);
-                digitalWrite (PIN_BASEPLATE_MOTOR_PLUS, LOW);
-                analogWrite (PIN_BASEPLATE_MOTOR_ENABLE, 0);
-                break;
-      case '5':  // Rotate left Servo to the middle:
-                FootprintLeft.sServo.writeMicroseconds (1500);  // Put Servo in Position 0° (Values are: 1000...2000 = -90° ... +90°)
-                delay (100);
-                break;
-      case '6':  // Rotate right Servo to the middle:
-                FootprintRight.sServo.writeMicroseconds (1500);  // Put Servo in Position 0° (Values are: 1000...2000 = -90° ... +90°)
-                delay (100);
-                break;
-      case '7':  // Rotate left Servo to the middle:
-                FootprintLeft.sServo.writeMicroseconds (1000);  // Put Servo in Position 0° (Values are: 1000...2000 = -90° ... +90°)
-                delay (100);
-                break;
-      case '8':  // Rotate right Servo to the middle:
-                FootprintRight.sServo.writeMicroseconds (1000);  // Put Servo in Position 0° (Values are: 1000...2000 = -90° ... +90°)
-                delay (100);
-                break;
-      case 'q': digitalWrite (PIN_STEPPER_COIL1_PLUS,LOW);  
-                digitalWrite (PIN_STEPPER_COIL1_MINUS,LOW);
-                digitalWrite (PIN_STEPPER_COIL2_PLUS,LOW);  
-                digitalWrite (PIN_STEPPER_COIL2_MINUS,LOW);
-                Serial.println ("Schrittmotor aus.");
-                break;
-      case 'W': digitalWrite (PIN_STEPPER_COIL1_PLUS,HIGH);  // Counter clockwise left stepper
-                digitalWrite (PIN_STEPPER_COIL1_MINUS,LOW);
+      case 's':
+                digitalWrite (PIN_STEPPER_COIL1_PLUS,HorizontalAxisSteps[HorizontalAxisIndex].PIN_STEPPER_COIL1_PLUS);
+                digitalWrite (PIN_STEPPER_COIL2_PLUS,HorizontalAxisSteps[HorizontalAxisIndex].PIN_STEPPER_COIL2_PLUS);
+                digitalWrite (PIN_STEPPER_COIL1_MINUS,HorizontalAxisSteps[HorizontalAxisIndex].PIN_STEPPER_COIL1_MINUS);
+                digitalWrite (PIN_STEPPER_COIL2_MINUS,HorizontalAxisSteps[HorizontalAxisIndex].PIN_STEPPER_COIL2_MINUS);
                 delay (500);
-                digitalWrite (PIN_STEPPER_COIL1_PLUS,LOW);  
+                digitalWrite (PIN_STEPPER_COIL1_PLUS,LOW);
+                digitalWrite (PIN_STEPPER_COIL2_PLUS,LOW);
                 digitalWrite (PIN_STEPPER_COIL1_MINUS,LOW);
-                Serial.println ("COIL 1: H, L");
-                break;
-      case 'w': digitalWrite (PIN_STEPPER_COIL1_PLUS,LOW);  // Clockwise left stepper
-                digitalWrite (PIN_STEPPER_COIL1_MINUS,HIGH);
-                delay (500);
-                digitalWrite (PIN_STEPPER_COIL1_PLUS,LOW);  
-                digitalWrite (PIN_STEPPER_COIL1_MINUS,LOW);
-                Serial.println ("COIL 1: L, H");
-                break;
-      case 'E': digitalWrite (PIN_STEPPER_COIL2_PLUS,HIGH);  // Counter-Clockwise left stepper
                 digitalWrite (PIN_STEPPER_COIL2_MINUS,LOW);
-                delay (500);
-                digitalWrite (PIN_STEPPER_COIL2_PLUS,LOW);  
-                digitalWrite (PIN_STEPPER_COIL2_MINUS,LOW);
-                Serial.println ("COIL 2: H, L");
                 break;
-      case 'e': digitalWrite (PIN_STEPPER_COIL2_PLUS,LOW);  // Clockwise left stepper
-                digitalWrite (PIN_STEPPER_COIL2_MINUS,HIGH);
-                delay (500);
-                digitalWrite (PIN_STEPPER_COIL2_PLUS,LOW);  
-                digitalWrite (PIN_STEPPER_COIL2_MINUS,LOW);
-                Serial.println ("COIL 2: L, H");
+      case '0': //
+                Serial.print ("bPWM="); Serial.print (bPWM);
+                Serial.print (", BasePlate.iCurrentPosition="); Serial.print (BasePlate.iCurrentPosition);
+                Serial.print (", BasePlate.iDestinationPosition="); Serial.print (BasePlate.iDestinationPosition);      
+                Serial.print (", BasePlate.lCurrentSpeed="); Serial.println (BasePlate.lCurrentSpeed);
                 break;
-      case 'f': digitalWrite (PIN_STEPPER_COIL1_PLUS,HIGH); delay (10); digitalWrite (PIN_STEPPER_COIL1_PLUS,LOW);
-                digitalWrite (PIN_STEPPER_COIL2_PLUS,HIGH); delay (10); digitalWrite (PIN_STEPPER_COIL2_PLUS,LOW);  
-                digitalWrite (PIN_STEPPER_COIL1_MINUS,HIGH);delay (10); digitalWrite (PIN_STEPPER_COIL1_MINUS,LOW);
-                digitalWrite (PIN_STEPPER_COIL2_MINUS,HIGH);delay (10); digitalWrite (PIN_STEPPER_COIL2_MINUS,LOW);
+      case '5': BasePlate.iDestinationPosition=BasePlate.iDestinationPosition+1;
+                Serial.print ("bPWM="); Serial.print (bPWM);
+                Serial.print (", BasePlate.iCurrentPosition="); Serial.print (BasePlate.iCurrentPosition);
+                Serial.print (", BasePlate.iDestinationPosition="); Serial.print (BasePlate.iDestinationPosition);      
+                Serial.print (", BasePlate.lCurrentSpeed="); Serial.println (BasePlate.lCurrentSpeed);
                 break;
-      case 'g': BasePlate.HorizontalAxis.DestinationPosition=0;
+      case '6': BasePlate.iDestinationPosition = 600;
+                Serial.print ("bPWM="); Serial.print (bPWM);
+                Serial.print (", BasePlate.iCurrentPosition="); Serial.print (BasePlate.iCurrentPosition);
+                Serial.print (", BasePlate.iDestinationPosition="); Serial.print (BasePlate.iDestinationPosition);      
+                Serial.print (", BasePlate.lCurrentSpeed="); Serial.println (BasePlate.lCurrentSpeed);
                 break;
-      case 'h': BasePlate.HorizontalAxis.DestinationPosition=200;
+      case '7': BasePlate.iDestinationPosition = 615;
+                Serial.print ("bPWM="); Serial.print (bPWM);
+                Serial.print (", BasePlate.iCurrentPosition="); Serial.print (BasePlate.iCurrentPosition);
+                Serial.print (", BasePlate.iDestinationPosition="); Serial.print (BasePlate.iDestinationPosition);      
+                Serial.print (", BasePlate.lCurrentSpeed="); Serial.println (BasePlate.lCurrentSpeed);
                 break;
-      case 'i': if (bDoDrycycle==1)
-                {
-                  bDoDrycycle=0;
-                }
-                else
-                {
-                  bDoDrycycle=1;
-                }
+      case '8': BasePlate.iDestinationPosition = 630;
+                Serial.print ("bPWM="); Serial.print (bPWM);
+                Serial.print (", BasePlate.iCurrentPosition="); Serial.print (BasePlate.iCurrentPosition);
+                Serial.print (", BasePlate.iDestinationPosition="); Serial.print (BasePlate.iDestinationPosition);      
+                Serial.print (", BasePlate.lCurrentSpeed="); Serial.println (BasePlate.lCurrentSpeed);
                 break;
+      case '9': BasePlate.iDestinationPosition = 660;
+                Serial.print ("bPWM="); Serial.print (bPWM);
+                Serial.print (", BasePlate.iCurrentPosition="); Serial.print (BasePlate.iCurrentPosition);
+                Serial.print (", BasePlate.iDestinationPosition="); Serial.print (BasePlate.iDestinationPosition);      
+                Serial.print (", BasePlate.lCurrentSpeed="); Serial.println (BasePlate.lCurrentSpeed);
+                break;
+
     }
+  }
+  
+  if ((bPreviousPWM!=bPWM)||(lPreviousSpeed!=BasePlate.lCurrentSpeed)||(BasePlate.bMoving==1))
+  {
+    Serial.print ("bPWM="); Serial.print (bPWM);
+    Serial.print (", PID_KI="); Serial.print (PID_KI);
+    Serial.print (", BasePlate.iCurrentPosition="); Serial.print (BasePlate.iCurrentPosition);
+    Serial.print (", BasePlate.iDestinationPosition="); Serial.print (BasePlate.iDestinationPosition);      
+    Serial.print (", BasePlate.lPreviousSpeed="); Serial.println (BasePlate.lPreviousSpeed);
+    bPreviousPWM=bPWM;
+    lPreviousSpeed=BasePlate.lCurrentSpeed;
   }
 }
 
-void fSendDataToPC ()
-{
+void fSendDataToPC () {
   long CX;
   long CY;
-  int JoystickX;
-  int JoystickY;
-  bool JoystickB;
-  int JoystickXValue;
-  int JoystickYValue;
-
-  JoystickX = analogRead (PIN_JOYSTICK_X);
-  JoystickY = analogRead (PIN_JOYSTICK_Y);
-  JoystickB = digitalRead (PIN_JOYSTICK_BUTTON);
-
-  JoystickXValue = ((JoystickX - 512)/5);
-  JoystickYValue = ((JoystickY - 512)/5);
   
   if (Serial.availableForWrite()>60)
   {
@@ -1220,9 +1184,8 @@ void setup() {
   fTCA9548A_Disable_I2C_BusDevice (FootprintRight.I2C_TCA9548A_Lower);
   
   // Init other stuff:
-  fBasePlate_Init ();
   fFootprint_Init ();
-  pinMode (PIN_JOYSTICK_BUTTON, INPUT);
+  fBasePlate_Init ();
 
   // Millisecond timer interrupt
   OCR0A = 0x7D;
@@ -1231,42 +1194,56 @@ void setup() {
 }
 
 void loop() {
-
   
   // Read values from Sensors:
   // ~~~~~~~~~~~~~~~~~~~~~~~~~
   //fGY271_Read_Values (); 
 
-/*
-  if (FootprintRight.CenterValid==1)
-  {
-    ulStop=millis();
-    Serial.print (ulStop-ulStart);
-    Serial.print ("ms, Cycles=");
-    Serial.print (ulCycles);
-    Serial.print (", X=");
-    Serial.print (FootprintRight.Center.X); Serial.print (", Y=");
-    Serial.println (FootprintRight.Center.Y);
-    ulStart=millis();
-    ulCycles=0;
-  }
-  */
-  
-  fReceiveCommandsFromPC ();
+  //Serial.println (digitalRead (PIN_REFERENCE_SWITCH));
   //fSendDataToPC ();
-//  fBasePlate_Move ();
-  
+  if (BasePlate.bMoving==0)
+  {
+    fBasePlate_Move ();  
+  }
+  fReceiveCommandsFromPC ();  
 }
 
 /* ***********************************************  I N T E R R U P T  ***********************************************
    ******************************************************************************************************************* */
 
 // Interrupt is called every millisecond
-ISR(TIMER0_COMPA_vect) 
-{  
+ISR(TIMER0_COMPA_vect)  {  
   static int x;
+
+  if (BasePlate.bMoving==1)
+  {
+    if (BasePlate.lCurrentSpeed<10)
+    {
+      if (PID_KI<MOTOR_HIGH_SPEED) PID_KI++;
+    }
+    if (BasePlate.lCurrentSpeed>20)
+    {
+      if (PID_KI>0) PID_KI--;
+    }
+    if (BasePlate.lCurrentSpeed!=0)
+    {
+      BasePlate.lPreviousSpeed=BasePlate.lCurrentSpeed;
+    }
+  }
+  BasePlate.lCurrentSpeed=0;
+  
+  // STEPPER STUFF:
+  // ~~~~~~~~~~~~~~
+  if (digitalRead (PIN_REFERENCE_SWITCH)==HIGH) // Reference Switch active?
+  { // Turn off motor
+    digitalWrite (PIN_STEPPER_COIL1_PLUS,LOW);
+    digitalWrite (PIN_STEPPER_COIL2_PLUS,LOW);
+    digitalWrite (PIN_STEPPER_COIL1_MINUS,LOW);
+    digitalWrite (PIN_STEPPER_COIL2_MINUS,LOW);
+    BasePlate.HorizontalAxis.CurrentPosition=0;    
+  }
   x++;
-  if (x<4) return;
+  if (x<8) return;
   x=0;
   if (BasePlate.HorizontalAxis.CurrentPosition!=BasePlate.HorizontalAxis.DestinationPosition)
   {
@@ -1300,24 +1277,10 @@ ISR(TIMER0_COMPA_vect)
     digitalWrite (PIN_STEPPER_COIL2_MINUS,HorizontalAxisSteps[HorizontalAxisIndex].PIN_STEPPER_COIL2_MINUS);
   }
   else
-  {
-    if (bDoDrycycle==1)
-    {
-      if (BasePlate.HorizontalAxis.CurrentPosition==0)
-      {
-        BasePlate.HorizontalAxis.DestinationPosition=200;
-      }
-      else
-      {
-        BasePlate.HorizontalAxis.DestinationPosition=0;
-      }
-    }
-    else
-    {
-      digitalWrite (PIN_STEPPER_COIL1_PLUS,LOW);
-      digitalWrite (PIN_STEPPER_COIL2_PLUS,LOW);
-      digitalWrite (PIN_STEPPER_COIL1_MINUS,LOW);
-      digitalWrite (PIN_STEPPER_COIL2_MINUS,LOW);
-    }
+  { // Turn off motor
+    digitalWrite (PIN_STEPPER_COIL1_PLUS,LOW);
+    digitalWrite (PIN_STEPPER_COIL2_PLUS,LOW);
+    digitalWrite (PIN_STEPPER_COIL1_MINUS,LOW);
+    digitalWrite (PIN_STEPPER_COIL2_MINUS,LOW);  
   }
 }
