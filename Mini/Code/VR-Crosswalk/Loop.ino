@@ -1,6 +1,4 @@
 void loop(){
-  int iServoLeftPosition;
-  int iServoRightPosition;
   double dServoRightPosition;
   int iPrimaryCurrentPosition;
   double dPrimaryCurrentPosition;
@@ -16,13 +14,12 @@ void loop(){
   
   fMotor_Execute();
   fInterface ();
-  fLogging ();
   
   // Control the angle of the footplate:
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   dPrimaryCurrentPosition = iPrimaryCurrentPosition;
   iServoLeftPosition = 1500;
-  dServoRightPosition = 1500 + (  ((180.0/600.0) * dPrimaryCurrentPosition) * (600.0/90.0) );
+  dServoRightPosition = 1500 + (  ((90.0/ENCODER_PULSES_PER_90DEGREE) * dPrimaryCurrentPosition) * (600.0/45.0) ); // The servo will be -600=-45°, +600=+45° 
   iServoRightPosition = dServoRightPosition;
   if (iServoRightPosition>2100) iServoRightPosition=2100;
   if (iServoRightPosition<900) iServoRightPosition=900;  
@@ -30,5 +27,8 @@ void loop(){
   if (iServoLeftPosition<900) iServoLeftPosition=900;  
   sServoLeft.writeMicroseconds (iServoLeftPosition);
   sServoRight.writeMicroseconds (iServoRightPosition+81);
+
+  
+  fLogging ();
 
 }

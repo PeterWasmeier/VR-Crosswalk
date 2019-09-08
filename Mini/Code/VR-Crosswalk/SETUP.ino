@@ -27,8 +27,10 @@ void setup(){
   fSteppermotor_Init ();
   fSteppermotor_TurnOff ();
   
-  fCNC_SetCurrent (30.0,0.0);
-  fCNC_SetDestination  (30.0, 0.0, 30.0,0.0);
+  fCNC_SetCurrent (30.0,0.0); // Units in mm
+  fCNC_SetDestination  (30.0, 0.0, 30.0,0.0); // Units in mm
+  Steppermotor.iCurrentPosition=30*5; // When power up, the footplate is 30mm away from the center. Each step is ~0,2mm. So 30*5 steps=30mm
+  Steppermotor.iTargetPosition=30*5;  // When power up, the footplate is 30mm away from the center. Each step is ~0,2mm. So 30*5 steps=30mm
   
   // Millisecond timer interrupt
   OCR0A = 0x7D;

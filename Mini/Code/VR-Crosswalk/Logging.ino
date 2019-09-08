@@ -4,6 +4,9 @@ void fLogging () {
   unsigned long lS;
   unsigned long lM;
   unsigned long lH;
+  int i;
+  long lX;
+  long lY;
   char cH[3];
   char cM[3];
   char cS[3];
@@ -31,44 +34,72 @@ void fLogging () {
   cTime[11]=cm[2];
   cTime[12]=cm[3];
 
+  if (Logging.iServoLeftPosition!=iServoLeftPosition)
+  {
+    Logging.iServoLeftPosition=iServoLeftPosition;
+    Serial.print ("*;");
+    Serial.print (cTime); Serial.print (";SERVO_L_POS;"); Serial.print (Logging.iServoLeftPosition);
+    Serial.println (";#");
+  }
+  if (Logging.iServoRightPosition!=iServoRightPosition)
+  {
+    Logging.iServoRightPosition=iServoRightPosition;
+    Serial.print ("*;");
+    Serial.print (cTime); Serial.print (";SERVO_R_POS;"); Serial.print (Logging.iServoRightPosition);
+    Serial.println (";#");
+  }
   if (Logging.bMotor_LastPWMValue!=Motor.bLastPWMValue)
   {
     Logging.bMotor_LastPWMValue=Motor.bLastPWMValue;
-    Serial.print ("01.01.2019;");
-    Serial.print (cTime); Serial.print (";M_PWM;"); Serial.println (Logging.bMotor_LastPWMValue);
+    Serial.print ("*;");
+    Serial.print (cTime); Serial.print (";MOTOR_PWM;"); 
+    i = Logging.bMotor_LastPWMValue;
+    if (Motor.bLastDirection<0) i=-i;
+    Serial.print (i);
+    Serial.println (";#");
   }
   if (Logging.iMotor_TargetPosition!=Motor.iTargetPosition)
   {
     Logging.iMotor_TargetPosition=Motor.iTargetPosition;
-    Serial.print ("01.01.2019;");
-    Serial.print (cTime); Serial.print (";M_TAR;"); Serial.println (Logging.iMotor_TargetPosition);    
+    Serial.print ("*;");
+    Serial.print (cTime); Serial.print (";MOTOR_TARGET;"); Serial.print (Logging.iMotor_TargetPosition);    
+    Serial.println (";#");
   }
   if (Logging.iMotor_EncoderPosition!=Motor.iEncoderPosition)
   {
     Logging.iMotor_EncoderPosition=Motor.iEncoderPosition;
-    Serial.print ("01.01.2019;");
-    Serial.print (cTime); Serial.print (";M_ENC;"); Serial.println (Logging.iMotor_EncoderPosition);    
+    Serial.print ("*;");
+    Serial.print (cTime); Serial.print (";MOTOR_ENCODER;"); Serial.print (Logging.iMotor_EncoderPosition);    
+    Serial.println (";#");
   }
   if (Logging.iSteppermotor_CurrentPosition!=Steppermotor.iCurrentPosition)
   {
     Logging.iSteppermotor_CurrentPosition=Steppermotor.iCurrentPosition;
-    Serial.print ("01.01.2019;");
-    Serial.print (cTime); Serial.print (";S_POS;"); Serial.println (Logging.iSteppermotor_CurrentPosition);    
+    Serial.print ("*;");
+    Serial.print (cTime); Serial.print (";STEPPER_POS;"); Serial.print (Logging.iSteppermotor_CurrentPosition);    
+    Serial.println (";#");
   }
   if (Logging.iSteppermotor_TargetPosition!=Steppermotor.iTargetPosition)
   {
     Logging.iSteppermotor_TargetPosition=Steppermotor.iTargetPosition;
-    Serial.print ("01.01.2019;");
-    Serial.print (cTime); Serial.print (";S_TAR;"); Serial.println (Logging.iSteppermotor_TargetPosition);    
+    Serial.print ("*;");
+    Serial.print (cTime); Serial.print (";STEPPER_TAR;"); Serial.print (Logging.iSteppermotor_TargetPosition);    
+    Serial.println (";#");
   }
+  /*
   if ((abs (Logging.FootplateRight_SensorOffset.X-FootprintRight.SensorOffset.X)>1) ||
       (abs(Logging.FootplateRight_SensorOffset.Y-FootprintRight.SensorOffset.Y)>1))
   {
     Logging.FootplateRight_SensorOffset.X=FootprintRight.SensorOffset.X;
     Logging.FootplateRight_SensorOffset.Y=FootprintRight.SensorOffset.Y;
-    Serial.print ("01.01.2019;");
-    Serial.print (cTime); Serial.print (";F_X;"); Serial.println (Logging.FootplateRight_SensorOffset.X);    
-    Serial.print ("01.01.2019;");
-    Serial.print (cTime); Serial.print (";F_Y;"); Serial.println (Logging.FootplateRight_SensorOffset.Y);    
+    lX = Logging.FootplateRight_SensorOffset.X*1000;
+    lY = Logging.FootplateRight_SensorOffset.Y*1000; 
+    Serial.print ("*;");
+    Serial.print (cTime); Serial.print (";FOOT_R_X;"); Serial.print (lX);
+    Serial.println (";#");    
+    Serial.print ("*;01.01.2019;");
+    Serial.print (cTime); Serial.print (";FOOT_R_Y;"); Serial.print (lY);    
+    Serial.println (";#");    
   }
+  */
 }

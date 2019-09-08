@@ -1,8 +1,5 @@
 void fSteppermotor_Init () {
   Steppermotor.bTurnedOn=false;
-  Steppermotor.uiAcceleration = STEPPER_ACCELERATION;
-  Steppermotor.iCurrentPosition=30*5; // When power up, the footplate is 30mm away from the center. Each step is ~0,2mm. So 30*5 steps=30mm
-  Steppermotor.iTargetPosition=30*5;  // When power up, the footplate is 30mm away from the center. Each step is ~0,2mm. So 30*5 steps=30mm
   Steppermotor.bStepIndex=0;
   pinMode (PIN_STEPPER_COIL1_PLUS, OUTPUT);
   pinMode (PIN_STEPPER_COIL2_PLUS, OUTPUT);
@@ -23,6 +20,7 @@ void fSteppermotor_TurnOn () {
     digitalWrite (PIN_STEPPER_COIL2_MINUS, bSteppermotor_Steps[Steppermotor.bStepIndex].bPIN_COIL2_MINUS);
     Steppermotor.ulStart = millis ();
     Steppermotor.bLastDirection=0;
+    Steppermotor.ulRunningSince=0;
     Steppermotor.bTurnedOn=true;
   }
 }
@@ -31,6 +29,7 @@ void fSteppermotor_TurnOff () {
   if (Steppermotor.bTurnedOn==true)
   {
     Steppermotor.bTurnedOn=false;
+    Steppermotor.ulRunningSince=0;
     digitalWrite (PIN_STEPPER_COIL1_PLUS,LOW);
     digitalWrite (PIN_STEPPER_COIL2_PLUS,LOW);
     digitalWrite (PIN_STEPPER_COIL1_MINUS,LOW);
@@ -39,15 +38,15 @@ void fSteppermotor_TurnOff () {
 }
 
 void fSteppermotor_setTargetPosition (int iTargetPosition, bool bAutoTurnOff) {
-  if (iTargetPosition<0) iTargetPosition=0;
-  if (iTargetPosition>300) iTargetPosition=300;
+  if (iTargetPosition<120) iTargetPosition=120; // The footplate can not move less than 120 Units (=24mm) to the center
+  if (iTargetPosition>650) iTargetPosition=650; // The footplate can not move more than 650 Units (=130mm) away from the center because it is only 106mm long (+24mm hole begins here)
   Steppermotor.bAutoTurnOff = bAutoTurnOff;
   Steppermotor.iTargetPosition = iTargetPosition; 
 }
 
 void fSteppermotor_Execute () {
   unsigned long ulStop;
-  unsigned long ulDuration;
+  unsigned long ulDurationBetweenTwoPulses;
   double dVelocity;
   double dRunningSince;
   double dTimeDelayBetweenTwoPulses;
@@ -58,21 +57,22 @@ void fSteppermotor_Execute () {
 
   ulStop = millis ();
   if (ulStop<Steppermotor.ulStart)
-    ulDuration = (0xFFFFFFFF - Steppermotor.ulStart) + ulStop; // Overflow
+    ulDurationBetweenTwoPulses = (0xFFFFFFFF - Steppermotor.ulStart) + ulStop; // Overflow
   else
-    ulDuration = ulStop - Steppermotor.ulStart;
+    ulDurationBetweenTwoPulses = ulStop - Steppermotor.ulStart;
 
-  dRunningSince = ulDuration;                 // Result is milliseconds
-  dRunningSince = dRunningSince / 1000;       // Convert into seconds since the motor is spinning
-  dVelocity = Steppermotor.uiAcceleration;   // Calculate the necessary speed of the motor
+  Steppermotor.ulRunningSince += ulDurationBetweenTwoPulses; // Result is milliseconds
+  dRunningSince = Steppermotor.ulRunningSince;
+  dRunningSince = dRunningSince / 1000.0;
+  dVelocity = STEPPER_ACCELERATION;   // Calculate the necessary speed of the motor
   dVelocity = dVelocity * dRunningSince;      // Convert into mm/sec (current speed to use)
 
-  dPulsesPerSecond = (dVelocity * 5);         // Convert from mm/sec into Pulses per second
+  dPulsesPerSecond = (dVelocity * 5.0);         // Convert from mm/sec into Pulses per second
 
   dTimeDelayBetweenTwoPulses = 1000.0 / dPulsesPerSecond; // How many milliseconds between two pulses?
   lTimeDelayBetweenTwoPulses = dTimeDelayBetweenTwoPulses;
 
-  if (lTimeDelayBetweenTwoPulses<ulDuration) return; // The time is not yet over, so exit
+  if (ulDurationBetweenTwoPulses<lTimeDelayBetweenTwoPulses) return; // The time is not yet over, so exit
   
   // It is time to make a new pulse:
   if (Steppermotor.iTargetPosition!=Steppermotor.iCurrentPosition)
@@ -81,6 +81,7 @@ void fSteppermotor_Execute () {
     {
       if (Steppermotor.bLastDirection==-1)
       {
+        Steppermotor.ulRunningSince=0;
         Steppermotor.ulStart = millis ();                // Reset the start time, so the acceleration will begin again
         Steppermotor.bLastDirection=1;
         return;                             // We were moving in the opposite direction, so wait 1ms and come again
@@ -96,6 +97,7 @@ void fSteppermotor_Execute () {
     {
       if (Steppermotor.bLastDirection==1)
       {
+        Steppermotor.ulRunningSince=0;
         Steppermotor.ulStart = millis ();                // Reset the start time, so the acceleration will begin again
         Steppermotor.bLastDirection=-1;
         return;                             // We were moving in the opposite direction, so wait 1ms and come again
@@ -115,7 +117,8 @@ void fSteppermotor_Execute () {
   }
   else
   { 
-    if ((Steppermotor.bAutoTurnOff)&&(ulDuration>50)) // Turn off after 50ms
+    Steppermotor.ulRunningSince=0;
+    if ((Steppermotor.bAutoTurnOff)&&(ulDurationBetweenTwoPulses>50)) // Turn off after 50ms
     {
       Steppermotor.bLastDirection=0;                                       // Don't care anymore about direction change
       fSteppermotor_TurnOff ();                                             // This makes it necessary to call TurnOn and this one will set ulStart again

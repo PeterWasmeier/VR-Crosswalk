@@ -20,7 +20,7 @@ void fCNC_GetCurrentXY (long lCurrentPositionPrimaryAxis, long lCurrentPositionS
   double dY;
   double dCurrentPositionSecondaryAxis;
   dCurrentPositionSecondaryAxis =  lCurrentPositionSecondaryAxis * 5; // Result is now in mm
-  dAlpha = (90.0 / 300.0) * lCurrentPositionPrimaryAxis; // Result will be -90° ... +90° (-300 ... +300 Units)
+  dAlpha = (90.0 / ENCODER_PULSES_PER_90DEGREE) * lCurrentPositionPrimaryAxis; // Result will be -90° ... +90° (-600 ... +600 Units)
   dAlphaRadiant = dAlpha * (PI / 180.0);                 // Result is now in radiant
   dY = sin(dAlphaRadiant) * dCurrentPositionSecondaryAxis;
   dX = cos(dAlphaRadiant) * dCurrentPositionSecondaryAxis;
@@ -36,13 +36,13 @@ long fCNC_CalculatePrimaryAxis () {
   long lPosition;
   if (CNC.dDestinationX==0.0) 
   {
-    if (CNC.dDestinationY>0) return +300; // +90°
-    if (CNC.dDestinationY<0) return -300; // -90°
+    if (CNC.dDestinationY>0) return ENCODER_PULSES_PER_90DEGREE; // +90°
+    if (CNC.dDestinationY<0) return -ENCODER_PULSES_PER_90DEGREE; // -90°
     return 0; // This might be wrong and should never happen, have to fix this one later XXX
   }
   dAlphaRadiant = atan (CNC.dDestinationY / CNC.dDestinationX);  // Result will be -PI/2 .... +PI/2  
   dAlpha = (dAlphaRadiant / PI) * 180;                   // Result will be -90° ... +90°
-  dPosition = (300.0 / 90.0) * dAlpha;                   // Convert from degree to Units (-300 ... +300)
+  dPosition = (ENCODER_PULSES_PER_90DEGREE / 90.0) * dAlpha;                   // Convert from degree to Units (-600 ... +600)
   lPosition = dPosition;
   return lPosition;
 }
@@ -71,7 +71,7 @@ long fCNC_CalculateSecondaryAxis (long lCurrentPositionPrimaryAxis) {
   dX2 = CNC.dDestinationX;
   dY2 = CNC.dDestinationY; 
 
-  dAlpha = (90.0 / 300.0) * lCurrentPositionPrimaryAxis; // Result will be -90° ... +90° (-300 ... +300 Units)
+  dAlpha = (90.0 / ENCODER_PULSES_PER_90DEGREE) * lCurrentPositionPrimaryAxis; // Result will be -90° ... +90° (-600 ... +600 Units)
   dAlphaRadiant = dAlpha * (PI / 180.0);                 // Result is now in radiant
   dX2_Minus_dX1 = dX2-dX1;  
 

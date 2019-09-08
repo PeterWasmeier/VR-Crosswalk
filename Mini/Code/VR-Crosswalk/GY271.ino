@@ -72,16 +72,17 @@ void fGY271_Callback (const uint8_t bStatus) {
   y = (int)(int16_t)(cGY271_ReceiveBuffer[2] | cGY271_ReceiveBuffer[3] << 8);
   z = (int)(int16_t)(cGY271_ReceiveBuffer[4] | cGY271_ReceiveBuffer[5] << 8);
   s = cGY271_ReceiveBuffer[6];
-  if (pGY271_Callback_Sensor->SetOffset)
+  /*if (pGY271_Callback_Sensor->SetOffset)
   {
     pGY271_Callback_Sensor->Offset.X = x;
     pGY271_Callback_Sensor->Offset.Y = y;
     pGY271_Callback_Sensor->Offset.Z = z;
     pGY271_Callback_Sensor->SetOffset = 0;
   }
-  lx = x - pGY271_Callback_Sensor->Offset.X;
-  ly = y - pGY271_Callback_Sensor->Offset.Y;
-  lz = z - pGY271_Callback_Sensor->Offset.Z;
+  */
+  lx = x; //  - pGY271_Callback_Sensor->Offset.X;
+  ly = y; //  - pGY271_Callback_Sensor->Offset.Y;
+  lz = z; //  - pGY271_Callback_Sensor->Offset.Z;
   pGY271_Callback_Sensor->Value.X = lx;
   pGY271_Callback_Sensor->Value.Y = ly;
   pGY271_Callback_Sensor->Value.Z = lz;

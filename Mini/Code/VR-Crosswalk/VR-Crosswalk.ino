@@ -33,9 +33,9 @@ typedef struct {                    // tGY271_XYZ, contains the measured values 
 
 typedef struct {                    // tGY271, some values for each GY271 sensor
   bool Valid;                       // Value in "Value" is valid.
-  bool SetOffset;                   // True in case the current sensor value must be used as an offset
+  /*bool SetOffset;                   // True in case the current sensor value must be used as an offset*/
   tGY271_XYZ Value;                 // Current Sensorvalue from GY271
-  tGY271_XYZ Offset;                // Offset value for each single GY271 sensor
+  //tGY271_XYZ Offset;                // Offset value for each single GY271 sensor
 } tGY271;
 
 typedef struct {                    // tPosition, contains X and Y coordinates in mm.
@@ -66,9 +66,9 @@ typedef struct {                    // tSteppermotor, some stuff for the stepper
   bool bTurnedOn;                   // Stepper is currently turned on
   bool bAutoTurnOff;                // Turn off the stepper motor after 50ms when destination position is reached
   byte bStepIndex;                  // Index to the array "bSteppermotor_Steps[]", so keep in mind which coil is or was powered
-  unsigned int uiAcceleration;      // Acceleration in mm per seconds²
   unsigned long ulStart;            // Timestamp of the last step which was done. Needed to calculate the time until the next step has to be executed
   signed char bLastDirection;       // Current or last direction of the stepper motor. 0=unknown, -1=left, 1=right
+  unsigned long ulRunningSince;             // The stepper is running in one direction since these seconds
 } tSteppermotor;
 
 typedef struct {                    // tMotor, a lot of stuff for the DC motor
@@ -105,11 +105,13 @@ typedef struct {
   int iSteppermotor_CurrentPosition;
   int iSteppermotor_TargetPosition;
   tPosition FootplateRight_SensorOffset;
+  int iServoLeftPosition;
+  int iServoRightPosition;
 } tLogging;
 
 typedef struct {
-  char cCommand[10];
-  char cValue[10];
+  char cCommand[9];
+  char cValue[5];
   byte bValueLength;
   byte bCommandLength;
   bool bValueActive;  
@@ -133,6 +135,8 @@ tMotor Motor;                       // The motor of the baseplate which will rot
 tCNC CNC;
 tLogging Logging;
 tInterface Interface;
+int iServoLeftPosition;
+int iServoRightPosition;
 
 /* ******************************************************************************************************** */
 /* **************************************  GLOBAL CONSTANTS  ********************************************** */
@@ -144,11 +148,11 @@ const byte MOTOR_HIGH_SPEED = 90;   // The baseplate motor is a 6V motor. The po
 const byte STEPPER_ACCELERATION = 10; // 10 Units/second
 const double GY271_Sensor_X[] = {         -(40.64/2),          0.0,          (40.64/2),        -(40.64/2),          0.0,         (40.64/2) }; // X Position in mm of each single GY271 sensor on the footplate
 const double GY271_Sensor_Y[] = { -(143.149/2)+21.23, -(143.149/2), -(143.149/2)+21.23, (143.149/2)-22.86,  (143.149/2), (143.149/2)-22.86 }; // Y Position in mm of each single GY271 sensor on the footplate
-const tSteppermotor_Steps bSteppermotor_Steps[] = { { HIGH, LOW, LOW, LOW },
-                                                    { LOW, HIGH, LOW, LOW },
+const tSteppermotor_Steps bSteppermotor_Steps[] = { { LOW, LOW, LOW, HIGH },
                                                     { LOW, LOW, HIGH, LOW },
-                                                    { LOW, LOW, LOW, HIGH } };
-
+                                                    { LOW, HIGH, LOW, LOW },
+                                                    { HIGH, LOW, LOW, LOW } };
+const double ENCODER_PULSES_PER_90DEGREE = 600.0;
 /* ************************************************************************************************* */
 /* ************************************************************************************************* */
 /* ************************************************************************************************* */

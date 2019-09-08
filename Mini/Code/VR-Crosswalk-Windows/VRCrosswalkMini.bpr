@@ -3,27 +3,23 @@
 <PROJECT>
   <MACROS>
     <VERSION value="BCB.06.00"/>
-    <PROJECT value="Project1.exe"/>
-    <OBJFILES value="Project1.obj Unit1.obj"/>
-    <RESFILES value="Project1.res"/>
+    <PROJECT value="VRCrosswalkMini.exe"/>
+    <OBJFILES value="VRCrosswalkMini.obj uMain.obj"/>
+    <RESFILES value="VRCrosswalkMini.res"/>
     <IDLFILES value=""/>
     <IDLGENFILES value=""/>
     <DEFFILE value=""/>
-    <RESDEPEN value="$(RESFILES) Unit1.dfm"/>
+    <RESDEPEN value="$(RESFILES) uMain.dfm"/>
     <LIBFILES value=""/>
-    <LIBRARIES value="rtl.lib vcl.lib"/>
-    <SPARELIBS value="vcl.lib rtl.lib"/>
+    <LIBRARIES value="tee.lib vclx.lib bcbsmp.lib rtl.lib vcl.lib"/>
+    <SPARELIBS value="vcl.lib rtl.lib bcbsmp.lib vclx.lib tee.lib"/>
     <PACKAGES value="vcl.bpi rtl.bpi dbrtl.bpi adortl.bpi vcldb.bpi vclx.bpi bdertl.bpi 
-      vcldbx.bpi ibxpress.bpi dsnap.bpi cds.bpi bdecds.bpi qrpt.bpi teeui.bpi 
-      teedb.bpi tee.bpi dss.bpi teeqr.bpi visualclx.bpi visualdbclx.bpi 
-      dsnapcrba.bpi dsnapcon.bpi bcbsmp.bpi vclie.bpi xmlrtl.bpi inet.bpi 
-      inetdbbde.bpi inetdbxpress.bpi inetdb.bpi nmfast.bpi webdsnap.bpi 
-      bcbie.bpi websnap.bpi soaprtl.bpi dclocx.bpi dbexpress.bpi dbxcds.bpi 
-      indy.bpi bcb2kaxserver.bpi WinSkinC6.bpi dclusr.bpi OpenWirePkgCB6.bpi 
-      SignalLabBasicPkgCB6.bpi SignalLabAdditionalPkgCB6.bpi 
-      TimingLabBasicPkgCB6.bpi AudioLabBasicPkgCB6.bpi MediaLabBasicPkgCB6.bpi 
-      VideoLabBasicPkgCB6.bpi VideoLabAdditionalDsnCB6.bpi 
-      VideoLabAdditionalPkgCB6.bpi VideoLabPkgCB6.bpi SignalLabScopePkgCB6.bpi"/>
+      vcldbx.bpi ibxpress.bpi dsnap.bpi qrpt.bpi teeui.bpi teedb.bpi tee.bpi 
+      dss.bpi teeqr.bpi visualclx.bpi visualdbclx.bpi dsnapcrba.bpi dsnapcon.bpi 
+      bcbsmp.bpi vclie.bpi xmlrtl.bpi inet.bpi inetdbbde.bpi inetdbxpress.bpi 
+      inetdb.bpi nmfast.bpi webdsnap.bpi bcbie.bpi websnap.bpi soaprtl.bpi 
+      dclocx.bpi dbexpress.bpi indy.bpi bcb2kaxserver.bpi WinSkinC6.bpi 
+      dclusr.bpi cds.bpi bdecds.bpi dbxcds.bpi"/>
     <PATHCPP value=".;"/>
     <PATHPAS value=".;"/>
     <PATHRC value=".;"/>
@@ -33,17 +29,16 @@
     <LINKER value="ilink32"/>
     <USERDEFINES value="_DEBUG"/>
     <SYSDEFINES value="_RTLDLL;NO_STRICT"/>
-    <MAINSOURCE value="Project1.cpp"/>
-    <INCLUDEPATH value="&quot;C:\Program Files\Borland\CBuilder6\Projects&quot;;&quot;E:\New folder\VRTM Mini Trittplatten Simulation&quot;;$(BCB)\include;$(BCB)\include\vcl;$(BCB)\LabPacks;$(BCB)\OpenWire"/>
-    <LIBPATH value="&quot;C:\Program Files\Borland\CBuilder6\Projects&quot;;&quot;E:\New folder\VRTM Mini Trittplatten Simulation&quot;;$(BCB)\Projects\Lib;$(BCB)\lib\obj;$(BCB)\lib"/>
+    <MAINSOURCE value="VRCrosswalkMini.cpp"/>
+    <INCLUDEPATH value="&quot;C:\Program Files\Borland\CBuilder6\Projects&quot;;&quot;E:\VR Crosswalk Mini-Windows&quot;;$(BCB)\include;$(BCB)\include\vcl;$(BCB)\LabPacks;$(BCB)\OpenWire"/>
+    <LIBPATH value="&quot;C:\Program Files\Borland\CBuilder6\Projects&quot;;&quot;E:\VR Crosswalk Mini-Windows&quot;;$(BCB)\Projects\Lib;$(BCB)\lib\obj;$(BCB)\lib"/>
     <WARNINGS value="-w-par"/>
     <OTHERFILES value=""/>
   </MACROS>
   <OPTIONS>
     <IDLCFLAGS value="-I&quot;C:\Program Files\Borland\CBuilder6\Projects&quot; 
-      -I&quot;E:\New folder\VRTM Mini Trittplatten Simulation&quot; -I$(BCB)\include 
-      -I$(BCB)\include\vcl -I$(BCB)\LabPacks -I$(BCB)\OpenWire -src_suffix cpp 
-      -D_DEBUG -boa"/>
+      -I&quot;E:\VR Crosswalk Mini-Windows&quot; -I$(BCB)\include -I$(BCB)\include\vcl 
+      -I$(BCB)\LabPacks -I$(BCB)\OpenWire -src_suffix cpp -D_DEBUG -boa"/>
     <CFLAG1 value="-Od -H=$(BCB)\lib\vcl60.csm -Hc -Vx -Ve -X- -r- -a8 -b- -k -y -v -vi- -c 
       -tW -tWM"/>
     <PFLAGS value="-$YD -$W -$O- -$A8 -v -JPHNE -M"/>
@@ -59,9 +54,9 @@
     <OTHERFILES value=""/>
   </LINKER>
   <FILELIST>
-      <FILE FILENAME="Project1.res" FORMNAME="" UNITNAME="Project1.res" CONTAINERID="ResTool" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="Project1.cpp" FORMNAME="" UNITNAME="Project1" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
-      <FILE FILENAME="Unit1.cpp" FORMNAME="Form1" UNITNAME="Unit1" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="VRCrosswalkMini.res" FORMNAME="" UNITNAME="VRCrosswalkMini.res" CONTAINERID="ResTool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="VRCrosswalkMini.cpp" FORMNAME="" UNITNAME="VRCrosswalkMini" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="uMain.cpp" FORMNAME="frmMain" UNITNAME="uMain" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
   </FILELIST>
   <BUILDTOOLS>
   </BUILDTOOLS>
@@ -96,13 +91,13 @@ Comments=
 
 [HistoryLists\hlIncludePath]
 Count=3
-Item0=C:\Program Files\Borland\CBuilder6\Projects;E:\New folder\VRTM Mini Trittplatten Simulation;$(BCB)\include;$(BCB)\include\vcl;$(BCB)\LabPacks;$(BCB)\OpenWire
+Item0=C:\Program Files\Borland\CBuilder6\Projects;E:\VR Crosswalk Mini-Windows;$(BCB)\include;$(BCB)\include\vcl;$(BCB)\LabPacks;$(BCB)\OpenWire
 Item1=$(BCB)\include;$(BCB)\include\vcl;$(BCB)\LabPacks;$(BCB)\OpenWire
 Item2=$(BCB)\include;$(BCB)\include\vcl
 
 [HistoryLists\hlLibraryPath]
 Count=2
-Item0=C:\Program Files\Borland\CBuilder6\Projects;E:\New folder\VRTM Mini Trittplatten Simulation;$(BCB)\Projects\Lib;$(BCB)\lib\obj;$(BCB)\lib
+Item0=C:\Program Files\Borland\CBuilder6\Projects;E:\VR Crosswalk Mini-Windows;$(BCB)\Projects\Lib;$(BCB)\lib\obj;$(BCB)\lib
 Item1=$(BCB)\lib\obj;$(BCB)\lib
 
 [HistoryLists\hlDebugSourcePath]

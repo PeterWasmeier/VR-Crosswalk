@@ -182,7 +182,7 @@ void fMotor_Execute () {
   fMotor_setPWM(lpwmWidth);
   Motor.bExecuteIsActive=false;
 }
-
+/*
 bool fMotor_loopCheckEncoderInverted () {
   int ipwm = 0; 
   long lposition = 0;
@@ -313,8 +313,8 @@ bool fMotor_loopAutoTune(void) {
             Tu = (fWaveDurationAverage*2) / 1000000; // Average in Seconds
             // classic PID according to Ziegler–Nichols method
             //PIDParameter.fP = 0.6 * PIDParameter.fP;
-            //PIDParameter.fI = Tu / 2; /* Ki = 0,5 * Tu */
-            //PIDParameter.fD = Tu / 8; /* Kd = 0,125 * Tu */
+            //PIDParameter.fI = Tu / 2; 
+            //PIDParameter.fD = Tu / 8; 
 
             // no overshoot according to Ziegler–Nichols method
             //PIDParameter.fP = 0.2 * PIDParameter.fP;
@@ -379,7 +379,7 @@ bool fMotor_loopAutoTune(void) {
     iPreviousEncoderPosition=iCurrentEncoderPosition;
   }
 }
-
+*/
 void fMotor_EncoderInterrupt() {
   bool bEncoderChannelA;
   bool bEncoderChannelB;
