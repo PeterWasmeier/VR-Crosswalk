@@ -32,18 +32,17 @@ void __fastcall TfrmMain::Close1Click(TObject *Sender)
 //---------------------------------------------------------------------------
 void __fastcall TfrmMain::COM11Click(TObject *Sender)
 {
-  if ((hCom = OpenComm("COM1")) != INVALID_HANDLE_VALUE)
+  if (OpenComm("COM1"))
   {
     COM11->Checked=true;
-    SetDeviceControlBlock(hCom, 115000, 8, NOPARITY, ONESTOPBIT);
   }
 }
 //---------------------------------------------------------------------------
-HANDLE TfrmMain::OpenComm(char *Port)
+bool TfrmMain::OpenComm(char *Port)
 {
   bReceiveStarted=false;
   CloseComm (hCom);
-  HANDLE hCom2 = ::CreateFile(Port,
+  hCom = ::CreateFile(Port,
                              GENERIC_READ | GENERIC_WRITE,
                              0,
                              0,
@@ -51,14 +50,15 @@ HANDLE TfrmMain::OpenComm(char *Port)
                              FILE_ATTRIBUTE_NORMAL,
                              0);
 
-  if (hCom2 == INVALID_HANDLE_VALUE)
+  if (hCom == INVALID_HANDLE_VALUE)
   {
     // ... Fehler
     MessageBox (0,"Com-Port not available","Error",0);
-    return INVALID_HANDLE_VALUE;
+    return false;
   }
   iReceiveDataLength=0;
-  return hCom2;
+  SetDeviceControlBlock(hCom, 115000, 8, NOPARITY, ONESTOPBIT);
+  return true;
 }
 //---------------------------------------------------------------------------
 void TfrmMain::SetDeviceControlBlock(HANDLE hCom, DWORD BaudRate, BYTE ByteSize, BYTE Parity, BYTE StopBits)
@@ -102,6 +102,7 @@ int TfrmMain::SendData(HANDLE hCom, char *Data, int Length)
   if (!::WriteFile(hCom, Data, Length, &NumberOfBytesWritten, 0))
   {
     // ... Fehler
+    NumberOfBytesWritten=0;
   }
   return NumberOfBytesWritten;
 }
@@ -142,26 +143,16 @@ void __fastcall TfrmMain::Timer1Timer(TObject *Sender)
     if (iLength==0) break;
     if ((cData!=13) && (cData!=10))
     {
-      if (cData=='*')
-      {
-        iReceiveDataLength=0;
-        bReceiveStarted=true;
-      }
-      else
-      {
-        if (bReceiveStarted==true)
-        {
-          cReceiveData[iReceiveDataLength++]=cData;
-        }
-      }
-      if ((cData=='#')&&(bReceiveStarted==true))
-      {
-        bReceiveStarted=false;
-        iReceiveDataLength=0;
-        // Daten sind vollständig übertragen
-        fInterpreteReceivedData (cReceiveData);
-        if (bUpdateChart) UpdateChart ();
-      }
+      cReceiveData[iReceiveDataLength++]=cData;
+    }
+    if (cData=='\r')
+    {
+      cReceiveData[iReceiveDataLength]=0;
+      iReceiveDataLength=0;
+      // Daten sind vollständig übertragen
+      fInterpreteReceivedData (cReceiveData);
+      if (bUpdateChartMotor) UpdateChartMotor ();
+      if (bUpdateChartStepper) UpdateChartStepper ();
     }
   }
   if (bRefreshDisplay==true)
@@ -173,87 +164,92 @@ void __fastcall TfrmMain::Timer1Timer(TObject *Sender)
                 0,0);
   }
   Timer1->Enabled=true;
-
 }
 //---------------------------------------------------------------------------
 void __fastcall TfrmMain::fInterpreteReceivedData (char *cChar)
 {
   AnsiString sData;
-  AnsiString sS[5];
+  AnsiString sName;
+  AnsiString sValue;
   TListItem *LI;
   sData = cChar;
   Memo1->Lines->Add(sData);
 
-  // *;
-  sS[0]=sData.SubString(1,sData.Pos(';')-1);
-  sData = sData.SubString (sData.Pos(';')+1,999);
-  // Time
-  sS[1]=sData.SubString(1,sData.Pos(';')-1);
-  sData = sData.SubString (sData.Pos(';')+1,999);
   // Name
-  sS[2]=sData.SubString(1,sData.Pos(';')-1);
-  sData = sData.SubString (sData.Pos(';')+1,999);
-  // Value
-  sS[3]=sData.SubString(1,sData.Pos(';')-1);
-  sData = sData.SubString (sData.Pos(';')+1,999);
+  sName = sData.SubString(1,sData.Pos(';')-1);
+  sValue = sData.SubString (sData.Pos(';')+1,999);
 
-  LI=ListView1->FindCaption (0,sS[2],false,true,false);
+  LI=ListView1->FindCaption (0,sName,false,true,false);
   if (LI!=NULL)
   {
-    LI->SubItems->Strings[0]=sS[3];
+    LI->SubItems->Strings[0]=sValue;
   }
   else
   {
     LI = ListView1->Items->Add();
-    LI->Caption = sS[2];
-    LI->SubItems->Add(sS[3]);
+    LI->Caption = sName;
+    LI->SubItems->Add(sValue);
   }
-
+  // **************************************************************************
   try
   {
-  if (sS[2]=="MOTOR_PWM") // Current PWM signal for the motor
-  {
-    iMotor_LastPWMValue = StrToInt(sS[3]);
-    bUpdateChart=true;
-  }
-  if (sS[2]=="SERVO_L_POS") // Servo Left Position in Units
-  {
-    iServoLeftPosition = StrToInt(sS[3]);
-    bRefreshDisplay=true;
-  }
-  if (sS[2]=="SERVO_R_POS") // Servo Right Position in Units
-  {
-    iServoRightPosition = StrToInt(sS[3]);
-    bRefreshDisplay=true;
-  }
-  if (sS[2]=="MOTOR_TARGET") // Motor target position
-  {
-    iMotor_TargetPosition = StrToInt(sS[3]);
-    bUpdateChart=true;
-  }
-  if (sS[2]=="MOTOR_ENCODER") // Motor current position
-  {
-    iMotor_EncoderPosition = StrToInt(sS[3]);
-    bRefreshDisplay=true;
-    bUpdateChart=true;
-  }
-  if (sS[2]=="STEPPER_POS") // Stepper motor position
-  {
-    iSteppermotor_CurrentPosition = StrToInt(sS[3]);
-    bRefreshDisplay=true;
-  }
-  if (sS[2]=="FOOT_R_X") // GY271 Sensor X value from the right footplate
-  {
-    FootplateRight_SensorOffsetX = StrToInt(sS[3]);
-    FootplateRight_SensorOffsetX = FootplateRight_SensorOffsetX / 1000;
-    bRefreshDisplay=true;
-  }
-  if (sS[2]=="FOOT_R_Y") // GY271 Sensor Y value from the right footplate
-  {
-    FootplateRight_SensorOffsetY = StrToInt(sS[3]);
-    FootplateRight_SensorOffsetY = FootplateRight_SensorOffsetY / 1000;
-    bRefreshDisplay=true;
-  }
+    if (sName=="MOTOR_PWM") // Current PWM signal for the motor
+    {
+      iMotor_LastPWMValue = StrToInt(sValue);
+      bUpdateChartMotor=true;
+    }
+    else
+    if (sName=="SERVO_L_POS") // Servo Left Position in Units
+    {
+      iServoLeftPosition = StrToInt(sValue);
+      bRefreshDisplay=true;
+    }
+    else
+    if (sName=="SERVO_R_POS") // Servo Right Position in Units
+    {
+      iServoRightPosition = StrToInt(sValue);
+      bRefreshDisplay=true;
+    }
+    else
+    if (sName=="MOTOR_TARGET") // Motor target position
+    {
+      iMotor_TargetPosition = StrToInt(sValue);
+      bUpdateChartMotor=true;
+    }
+    else
+    if (sName=="MOTOR_ENCODER") // Motor current position
+    {
+      iMotor_EncoderPosition = StrToInt(sValue);
+      bRefreshDisplay=true;
+      bUpdateChartMotor=true;
+    }
+    else
+    if (sName=="STEPPER_POSITION") // Stepper motor position
+    {
+      iSteppermotor_CurrentPosition = StrToInt(sValue);
+      bRefreshDisplay=true;
+      bUpdateChartStepper=true;
+    }
+    else
+    if (sName=="STEPPER_TARGET")
+    {
+      iSteppermotor_TargetPosition = StrToInt(sValue);
+      bUpdateChartStepper=true;
+    }
+    else
+    if (sName=="FOOT_R_X") // GY271 Sensor X value from the right footplate
+    {
+      FootplateRight_SensorOffsetX = StrToInt(sValue);
+      FootplateRight_SensorOffsetX = FootplateRight_SensorOffsetX / 1000;
+      bRefreshDisplay=true;
+    }
+    else
+    if (sName=="FOOT_R_Y") // GY271 Sensor Y value from the right footplate
+    {
+      FootplateRight_SensorOffsetY = StrToInt(sValue);
+      FootplateRight_SensorOffsetY = FootplateRight_SensorOffsetY / 1000;
+      bRefreshDisplay=true;
+    }
   }
   catch (...)
   {
@@ -261,16 +257,14 @@ void __fastcall TfrmMain::fInterpreteReceivedData (char *cChar)
   }
 }
 
-void __fastcall TfrmMain::UpdateChart()
+void __fastcall TfrmMain::UpdateChartMotor()
 {
-  double tmp1,tmp2,tmp3,tmpMin,tmpMax;
-  bool bDelete=false;
+  double tmp1,tmp2,tmp3;
+  bUpdateChartMotor=false;
 
-  bUpdateChart=false;
-
-  if (Chart1->Series[0]->XValues->Count()>MaxPoints) { Chart1->Series[0]->Delete(0);bDelete=true; }
-  if (Chart1->Series[1]->XValues->Count()>MaxPoints) { Chart1->Series[1]->Delete(0);bDelete=true; }
-  if (Chart1->Series[2]->XValues->Count()>MaxPoints) { Chart1->Series[2]->Delete(0);bDelete=true; }
+  if (Chart1->Series[0]->XValues->Count()>MaxPoints) Chart1->Series[0]->Delete(0);
+  if (Chart1->Series[1]->XValues->Count()>MaxPoints) Chart1->Series[1]->Delete(0);
+  if (Chart1->Series[2]->XValues->Count()>MaxPoints) Chart1->Series[2]->Delete(0);
 
   if (Chart1->Series[0]->XValues->Count()>0) tmp1 = Chart1->Series[0]->XValues->Last(); else tmp1=0;
   if (Chart1->Series[1]->XValues->Count()>0) tmp2 = Chart1->Series[1]->XValues->Last(); else tmp2=0;
@@ -284,60 +278,59 @@ void __fastcall TfrmMain::UpdateChart()
   Chart1->Series[1]->AddXY(tmp2+1,iMotor_TargetPosition);    // GREEN
   Chart1->Series[2]->AddXY(tmp3+1,iMotor_EncoderPosition);   // BLUE
 
-  // Min-Max PWM
-  tmpMin = Chart1->Series[0]->YValues->MinValue;
-  tmpMax = Chart1->Series[0]->YValues->MaxValue;
-  //Chart1->Series[0]->GetVertAxis->SetMinMax(tmpMin-tmpMin/5,tmpMax+tmpMax/5);
-  //Chart1->Series[0]->GetVertAxis->SetMinMax(-90,90);
+}
 
-  // Min-Max Position
-  tmpMin = Chart1->Series[1]->YValues->MinValue;
-  if (Chart1->Series[2]->YValues->MinValue<tmpMin)
-    tmpMin = Chart1->Series[2]->YValues->MinValue;
-  tmpMax = Chart1->Series[1]->YValues->MaxValue;
-  if (Chart1->Series[2]->YValues->MaxValue>tmpMax)
-    tmpMax = Chart1->Series[2]->YValues->MaxValue;
-  //Chart1->Series[1]->GetVertAxis->SetMinMax(-600,+600);
-//  Chart1->Series[1]->GetVertAxis->SetMinMax(tmpMin-tmpMin/5,tmpMax+tmpMax/5);
+void __fastcall TfrmMain::UpdateChartStepper()
+{
+  double tmp1,tmp2;
+  bUpdateChartStepper=false;
+
+  if (Chart2->Series[0]->XValues->Count()>MaxPoints) Chart2->Series[0]->Delete(0);
+  if (Chart2->Series[1]->XValues->Count()>MaxPoints) Chart2->Series[1]->Delete(0);
+
+  if (Chart2->Series[0]->XValues->Count()>0) tmp1 = Chart2->Series[0]->XValues->Last(); else tmp1=0;
+  if (Chart2->Series[1]->XValues->Count()>0) tmp2 = Chart2->Series[1]->XValues->Last(); else tmp2=0;
+
+  Chart2->Series[0]->GetHorizAxis->SetMinMax(tmp1-150,tmp1+1);
+  Chart2->Series[1]->GetHorizAxis->SetMinMax(tmp2-150,tmp2+1);
+
+  Chart2->Series[0]->AddXY(tmp1+1,iSteppermotor_TargetPosition);    // GREEN
+  Chart2->Series[1]->AddXY(tmp2+1,iSteppermotor_CurrentPosition);   // BLUE
 
 }
 
 void __fastcall TfrmMain::COM21Click(TObject *Sender)
 {
-  if ((hCom = OpenComm("COM2")) != INVALID_HANDLE_VALUE)
+  if (OpenComm("COM2"))
   {
     COM21->Checked=true;
-    SetDeviceControlBlock(hCom, 115000, 8, NOPARITY, ONESTOPBIT);
   }
 }
 //---------------------------------------------------------------------------
 
 void __fastcall TfrmMain::COM31Click(TObject *Sender)
 {
-  if ((hCom = OpenComm("COM3")) != INVALID_HANDLE_VALUE)
+  if (OpenComm("COM3"))
   {
     COM31->Checked=true;
-    SetDeviceControlBlock(hCom, 115000, 8, NOPARITY, ONESTOPBIT);
   }
 }
 //---------------------------------------------------------------------------
 
 void __fastcall TfrmMain::COM41Click(TObject *Sender)
 {
-  if ((hCom = OpenComm("COM4")) != INVALID_HANDLE_VALUE)
+  if (OpenComm("COM4"))
   {
     COM41->Checked=true;
-    SetDeviceControlBlock(hCom, 115000, 8, NOPARITY, ONESTOPBIT);
   }
 }
 //---------------------------------------------------------------------------
 
 void __fastcall TfrmMain::COM51Click(TObject *Sender)
 {
-  if ((hCom = OpenComm("COM5")) != INVALID_HANDLE_VALUE)
+  if (OpenComm("COM5"))
   {
     COM51->Checked=true;
-    SetDeviceControlBlock(hCom, 115000, 8, NOPARITY, ONESTOPBIT);
   }
 }
 //---------------------------------------------------------------------------
@@ -538,7 +531,7 @@ void __fastcall TfrmMain::DrawBaseplate(int iMotorposition, int iStepperposition
   // ***************************************************************
   // Draw GY271 values
   // ***************************************************************
-  RotatePoint2 (dFootplateRightGY271X*2,  dFootplateRightGY271Y*2, dDegreeFootprintRight, dFootprintRightCenterX, dFootprintRightCenterY, &lX, &lY);
+  RotatePoint2 (dFootplateRightGY271X*2,  -dFootplateRightGY271Y*2, dDegreeFootprintRight, dFootprintRightCenterX, dFootprintRightCenterY, &lX, &lY);
   Image1->Canvas->Brush->Color = clRed; // Background color, inner fill of the ellipse
   Image1->Canvas->Pen->Color = clRed;     // Forecolor, outer bounds color of the ellipse
   Image1->Canvas->Ellipse(lX-6*2, lY-6*2, lX+6*2, lY+6*2);
@@ -548,7 +541,7 @@ void __fastcall TfrmMain::DrawBaseplate(int iMotorposition, int iStepperposition
   Image1->Canvas->MoveTo (dFootprintRightCenterX,dFootprintRightCenterY);
   Image1->Canvas->LineTo (lX,lY);
 
-  RotatePoint2 (dFootplateLeftGY271X*2,  dFootplateLeftGY271Y*2, dDegreeFootprintLeft, dFootprintLeftCenterX, dFootprintLeftCenterY, &lX, &lY);
+  RotatePoint2 (dFootplateLeftGY271X*2,  -dFootplateLeftGY271Y*2, dDegreeFootprintLeft, dFootprintLeftCenterX, dFootprintLeftCenterY, &lX, &lY);
   Image1->Canvas->Brush->Color = clRed; // Background color, inner fill of the ellipse
   Image1->Canvas->Pen->Color = clRed;     // Forecolor, outer bounds color of the ellipse
   Image1->Canvas->Ellipse(lX-6*2, lY-6*2, lX+6*2, lY+6*2);
@@ -559,23 +552,17 @@ void __fastcall TfrmMain::DrawBaseplate(int iMotorposition, int iStepperposition
   Image1->Canvas->MoveTo (dFootprintLeftCenterX,dFootprintLeftCenterY);
   Image1->Canvas->LineTo (lX,lY);
 
-  Panel6->Visible=true;
 
 }
 
 
 void __fastcall TfrmMain::Button2Click(TObject *Sender)
 {
-     fInterpreteReceivedData ("*;13:22:11.231;MOTOR_ENCODER;123;#");
-  if (bUpdateChart)
-    UpdateChart ();
-/*
-  DrawBaseplate(300,            // Motor Position
-                400,            // Stepper Position
-                2100,1500,      // Servo right and Servo left
-                0,0,            // GY271 Center Footplate right
-                0,0);           // GY271 Center Footplate left
-                */
+  DrawBaseplate(0,            // Motor Position
+                150,            // Stepper Position
+                1500,1500,      // Servo right and Servo left
+                20,20,            // GY271 Center Footplate right
+                20,20);           // GY271 Center Footplate left
 }
 //---------------------------------------------------------------------------
 void __fastcall TfrmMain::SendString (AnsiString sData)
@@ -589,6 +576,7 @@ void __fastcall TfrmMain::SendString (AnsiString sData)
 
 void __fastcall TfrmMain::btnOFFClick(TObject *Sender)
 {
+  cbAutoupdate->Checked=false;
   SendString ("OFF");
 }
 //---------------------------------------------------------------------------
@@ -601,7 +589,7 @@ void __fastcall TfrmMain::btnStepperClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
-void __fastcall TfrmMain::Button1Click(TObject *Sender)
+void __fastcall TfrmMain::btnMotorClick(TObject *Sender)
 {
   AnsiString sString;
   sString="MOTOR=" + IntToStr(csMotorPosition->Value);
@@ -610,21 +598,111 @@ void __fastcall TfrmMain::Button1Click(TObject *Sender)
 //---------------------------------------------------------------------------
 
 
-void __fastcall TfrmMain::FormShow(TObject *Sender)
+
+void __fastcall TfrmMain::btnPClick(TObject *Sender)
 {
-/*  Chart1->ClipPoints = false;
-  Chart1->Title->Visible = false;
-  Chart1->Legend->Visible = false;
-  Chart1->LeftAxis->Axis->Width=1;
-  Chart1->BottomAxis->Axis->Width=1;
-  Chart1->BottomAxis->RoundFirstLabel = false;
-  Chart1->View3D = false;
-  Chart1->Series[0]->XValues->Order=loNone;
-  Chart1->Series[1]->XValues->Order=loNone;
-  Chart1->Series[2]->XValues->Order=loNone;
-  Chart1->BottomAxis->SetMinMax(1,200);
-  Chart1->Canvas->ReferenceCanvas->Pen->OwnerCriticalSection = 0;
-  */
+  AnsiString sString;
+  sString="P=" + IntToStr(csP->Value);
+  SendString (sString);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnIClick(TObject *Sender)
+{
+  AnsiString sString;
+  sString="I=" + IntToStr(csI->Value);
+  SendString (sString);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnDClick(TObject *Sender)
+{
+  AnsiString sString;
+  sString="D=" + IntToStr(csD->Value);
+  SendString (sString);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnStepperACCClick(TObject *Sender)
+{
+  AnsiString sString;
+  sString="STEPPER_ACC=" + IntToStr(csStepperACC->Value);
+  SendString (sString);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnSTATUSClick(TObject *Sender)
+{
+  SendString ("STATUS");
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnMotor0Click(TObject *Sender)
+{
+  SendString ("MOTOR=0");
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnMotor100Click(TObject *Sender)
+{
+  SendString ("MOTOR=100");
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnGORClick(TObject *Sender)
+{
+  SendString ("GO_R");
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnStepper250Click(TObject *Sender)
+{
+  SendString ("STEPPER=250");
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnOffset_RClick(TObject *Sender)
+{
+  SendString ("OFFSET_R");
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::Button1Click(TObject *Sender)
+{
+  SendString ("OFFSET_R");
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnUpClick(TObject *Sender)
+{
+  SendString ("MOVE_U");
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnDownClick(TObject *Sender)
+{
+  SendString ("MOVE_D");
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnRightClick(TObject *Sender)
+{
+  SendString ("MOVE_R");
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnLeftClick(TObject *Sender)
+{
+  SendString ("MOVE_L");
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::Timer2Timer(TObject *Sender)
+{
+  if (cbAutoupdate->Checked)
+  {
+    SendString ("GO_R");
+  }
 }
 //---------------------------------------------------------------------------
 

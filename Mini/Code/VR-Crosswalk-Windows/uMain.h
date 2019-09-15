@@ -17,22 +17,12 @@
 #include <Series.hpp>
 #include <TeEngine.hpp>
 #include <TeeProcs.hpp>
+#include <Mask.hpp>
 //---------------------------------------------------------------------------
 class TfrmMain : public TForm
 {
 __published:	// IDE-managed Components
-        TPanel *Panel1;
         TSplitter *Splitter1;
-        TPanel *Panel2;
-        TPanel *Panel3;
-        TSplitter *Splitter2;
-        TMemo *Memo1;
-        TPanel *Panel4;
-        TPanel *Panel5;
-        TPanel *Panel6;
-        TSplitter *Splitter3;
-        TPanel *Panel7;
-        TImage *Image1;
         TMainMenu *MainMenu1;
         TMenuItem *File1;
         TMenuItem *Close1;
@@ -43,22 +33,63 @@ __published:	// IDE-managed Components
         TMenuItem *COM41;
         TMenuItem *COM51;
         TTimer *Timer1;
-        TPanel *Panel10;
-        TListView *ListView1;
-        TSplitter *Splitter5;
-        TPanel *Panel11;
-        TButton *btnOFF;
-        TButton *btnStepper;
-        TCSpinEdit *csStepperPosition;
-        TLabel *Label1;
-        TLabel *Label2;
-        TCSpinEdit *csMotorPosition;
-        TButton *Button1;
-        TButton *Button2;
+        TPanel *Panel7;
+        TPageControl *PageControl1;
+        TTabSheet *TabSheet1;
         TChart *Chart1;
         TLineSeries *Series1;
         TLineSeries *Series2;
         TLineSeries *Series3;
+        TTabSheet *TabSheet2;
+        TChart *Chart2;
+        TLineSeries *LineSeries2;
+        TLineSeries *LineSeries3;
+        TPanel *Panel5;
+        TPanel *Panel1;
+        TImage *Image1;
+        TSplitter *Splitter3;
+        TPanel *Panel2;
+        TSplitter *Splitter2;
+        TPanel *Panel3;
+        TMemo *Memo1;
+        TPanel *Panel4;
+        TSplitter *Splitter5;
+        TPanel *Panel10;
+        TListView *ListView1;
+        TPanel *Panel11;
+        TLabel *Label1;
+        TLabel *Label2;
+        TLabel *Label3;
+        TLabel *Label4;
+        TLabel *Label5;
+        TLabel *Label6;
+        TButton *btnOFF;
+        TButton *btnStepper;
+        TCSpinEdit *csStepperPosition;
+        TCSpinEdit *csMotorPosition;
+        TButton *btnMotor;
+        TButton *Button2;
+        TButton *btnP;
+        TCSpinEdit *csP;
+        TButton *btnI;
+        TCSpinEdit *csI;
+        TButton *btnD;
+        TCSpinEdit *csD;
+        TButton *btnStepperACC;
+        TCSpinEdit *csStepperACC;
+        TButton *btnSTATUS;
+        TSplitter *Splitter4;
+        TButton *btnMotor0;
+        TButton *btnMotor100;
+        TButton *btnGOR;
+        TButton *btnStepper250;
+        TButton *btnOffset_R;
+        TButton *btnUp;
+        TButton *btnDown;
+        TButton *btnRight;
+        TButton *btnLeft;
+        TTimer *Timer2;
+        TCheckBox *cbAutoupdate;
         void __fastcall Close1Click(TObject *Sender);
         void __fastcall COM11Click(TObject *Sender);
         void __fastcall Timer1Timer(TObject *Sender);
@@ -69,8 +100,23 @@ __published:	// IDE-managed Components
         void __fastcall Button2Click(TObject *Sender);
         void __fastcall btnOFFClick(TObject *Sender);
         void __fastcall btnStepperClick(TObject *Sender);
+        void __fastcall btnMotorClick(TObject *Sender);
+        void __fastcall btnPClick(TObject *Sender);
+        void __fastcall btnIClick(TObject *Sender);
+        void __fastcall btnDClick(TObject *Sender);
+        void __fastcall btnStepperACCClick(TObject *Sender);
+        void __fastcall btnSTATUSClick(TObject *Sender);
+        void __fastcall btnMotor0Click(TObject *Sender);
+        void __fastcall btnMotor100Click(TObject *Sender);
+        void __fastcall btnGORClick(TObject *Sender);
+        void __fastcall btnStepper250Click(TObject *Sender);
+        void __fastcall btnOffset_RClick(TObject *Sender);
         void __fastcall Button1Click(TObject *Sender);
-        void __fastcall FormShow(TObject *Sender);
+        void __fastcall btnUpClick(TObject *Sender);
+        void __fastcall btnDownClick(TObject *Sender);
+        void __fastcall btnRightClick(TObject *Sender);
+        void __fastcall btnLeftClick(TObject *Sender);
+        void __fastcall Timer2Timer(TObject *Sender);
 private:	// User declarations
 
   int iMotor_LastPWMValue;
@@ -83,7 +129,8 @@ private:	// User declarations
   int iServoLeftPosition;
   int iServoRightPosition;
         bool bRefreshDisplay;
-        bool bUpdateChart;
+        bool bUpdateChartMotor;
+        bool bUpdateChartStepper;
         int iChartElements;
         int Dummy;
         HANDLE hCom;
@@ -91,10 +138,11 @@ private:	// User declarations
         char cReceiveData[512];
         int iReceiveDataLength;
         void CloseComm(HANDLE hCom);
-        HANDLE OpenComm(char *Port);
+        bool OpenComm(char *Port);
         void SetDeviceControlBlock(HANDLE hCom, DWORD BaudRate, BYTE ByteSize, BYTE Parity, BYTE StopBits);
         int SendData(HANDLE hCom, char *Data, int Length);
-        void __fastcall UpdateChart();
+        void __fastcall UpdateChartMotor();
+        void __fastcall UpdateChartStepper();
         DWORD ReceiveData(HANDLE hCom, char *Data, int Length);
         void __fastcall fInterpreteReceivedData (char *cChar);
         void __fastcall SendString (AnsiString sData);
