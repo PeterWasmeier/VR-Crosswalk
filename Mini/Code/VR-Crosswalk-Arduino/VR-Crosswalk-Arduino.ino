@@ -39,20 +39,27 @@ typedef struct {                    // tGY271, some values for each GY271 sensor
 } tGY271;
 
 typedef struct {                    // tPosition, contains X and Y coordinates in mm.
+  int X;                         // X Position in mm of something
+  int Y;                         // Y Position in mm of something
+} tPositionInt;
+
+typedef struct {                    // tPosition, contains X and Y coordinates in mm.
   double X;                         // X Position in mm of something
   double Y;                         // Y Position in mm of something
-} tPosition;
+} tPositionDouble;
 
 typedef struct {                    // tFootplate, stuff for each footplate
   tGY271 GY271[6];                  // Each footplate has got 6 GY271 sensors
-  tPosition Current;                // The current center of the footplate in mm
-  tPosition Destination;            // The destination, where the footplate has to move to in mm
-  tPosition SensorOffset;           // The offset of the foot above the footplate in mm
-  tPosition Offset;                 // Offset of "SensorOffset"
-  int Alpha;
+  tPositionInt Current;             // The current center of the footplate in mm
+  tPositionInt Destination;         // The destination, where the footplate center has to move to, Units in absolute mm
+  tPositionInt SensorOffset;        // The offset in mm of the shoe above the footplate
+  tPositionInt Offset;              // Offset of "SensorOffset"
+  volatile int Alpha;               // Orientation of the footplate relative to the shoe, this is not the real orientation, 90 = The plate orientation is under the shoe. The orientation of footplate itself is stored in ""
   bool SensorOffsetValid;           // The value in SensorOffset is valid or not   
   CI2C::Handle I2C_TCA9548A_Upper;  // I2C Handle to the upper TCA9548A chip of this footplate
   CI2C::Handle I2C_TCA9548A_Lower;  // I2C Handle to the lower TCA9548A chip of this footplate
+  volatile int iServoPosition;
+  volatile double dServoPosition;
 } tFootplate;
 
 typedef struct {                    // tSteppermotor_Steps, for each coil the steps in order to turn left/right
@@ -95,8 +102,10 @@ typedef struct {                    // tMotor, a lot of stuff for the DC motor
 } tMotor;
 
 typedef struct {
-  double dDestinationX;
-  double dDestinationY;  
+  int iPreviousDestinationX;
+  int iPreviousDestinationY;
+  int iDestinationX;
+  int iDestinationY;  
 } tCNC;
 
 typedef struct {
@@ -105,7 +114,6 @@ typedef struct {
   int iMotor_EncoderPosition;
   int iSteppermotor_CurrentPosition;
   int iSteppermotor_TargetPosition;
-  tPosition FootplateRight_SensorOffset;
   int iServoLeftPosition;
   int iServoRightPosition;
   int iFootprintRight_Alpha;
@@ -138,10 +146,9 @@ tCNC CNC;
 tLogging Logging;
 tInterface Interface;
 int iServoLeftPosition;
-volatile int iServoRightPosition;
-volatile double dServoRightPosition;
 bool bGO_R_Command_Active;
-
+bool bGO_R_Command_Once;
+bool bGO_R_Command_Always;
 /* ******************************************************************************************************** */
 /* **************************************  GLOBAL CONSTANTS  ********************************************** */
 /* ******************************************************************************************************** */
@@ -163,15 +170,19 @@ const double ENCODER_PULSES_PER_90DEGREE = 600.0;
 
 // Interrupt is called every millisecond
 ISR(TIMER0_COMPA_vect)  {  
+  double dPrimaryCurrentPosition;
   fSteppermotor_Execute ();
-  //dServoRightPosition = 1500 + (  ((90.0/ENCODER_PULSES_PER_90DEGREE) * dPrimaryCurrentPosition) * (600.0/45.0) ); // The servo will be -600=-45°, +600=+45° 
-  dServoRightPosition = dServoRightPosition + (FootprintRight.Alpha-90) * 0.1;
-  iServoRightPosition = dServoRightPosition;
-  if (iServoRightPosition>2100) iServoRightPosition=2100;
-  if (iServoRightPosition<900) iServoRightPosition=900;  
-  if (iServoLeftPosition>2100) iServoLeftPosition=2100;
-  if (iServoLeftPosition<900) iServoLeftPosition=900;  
-  sServoRight.writeMicroseconds (iServoRightPosition);
+  // Change the orientation of the footplate in a way, that the plate is below the shoe:
+  //dPrimaryCurrentPosition=Motor.iEncoderPosition;
+  //FootprintRight.dServoPosition = 1500 + (  ((90.0/ENCODER_PULSES_PER_90DEGREE) * dPrimaryCurrentPosition) * (600.0/45.0) ); // The servo will be -600=-45°, +600=+45° 
+  if (bGO_R_Command_Always)
+  {
+  FootprintRight.dServoPosition = FootprintRight.dServoPosition + (FootprintRight.Alpha-90) * 0.1;  // Proportional Controller to go to 90°
+  if (FootprintRight.dServoPosition>2100) FootprintRight.dServoPosition=2100;
+  if (FootprintRight.dServoPosition<900) FootprintRight.dServoPosition=900;  
+  FootprintRight.iServoPosition = FootprintRight.dServoPosition;
+  sServoRight.writeMicroseconds (FootprintRight.iServoPosition);
+  }
 }
 
 void DC_PIDMOTOR_EncoderInterrupt () {
@@ -204,7 +215,8 @@ void fFootprint_Init () {
   fGY271_Init (FootprintRight.I2C_TCA9548A_Lower, 4);
   FootprintRight.Offset.X=0;
   FootprintRight.Offset.Y=0;
-  iServoRightPosition=1500;
-  iServoLeftPosition=1500;
-  dServoRightPosition=1500;
+  FootprintRight.iServoPosition=1500;
+  FootprintRight.dServoPosition=1500;
+  FootprintRight.Destination.X=30;
+  FootprintRight.Destination.Y=0;
 }

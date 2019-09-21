@@ -39,13 +39,11 @@ void fSteppermotor_TurnOff () {
 }
 
 void fSteppermotor_setTargetPosition (int iTargetPosition, bool bAutoTurnOff) {
+  if (iTargetPosition==0) return;               // Special case: do nothing, because "fCNC_CalculateSecondaryAxis" could not calculate valid value
   if (iTargetPosition<120) iTargetPosition=120; // The footplate can not move less than 120 Units (=24mm) to the center
   if (iTargetPosition>650) iTargetPosition=650; // The footplate can not move more than 650 Units (=130mm) away from the center because it is only 106mm long (+24mm hole begins here)
   Steppermotor.bAutoTurnOff = bAutoTurnOff;
-  if (abs(Steppermotor.iTargetPosition - iTargetPosition)>5)
-  {
-    Steppermotor.iTargetPosition = iTargetPosition; 
-  }
+  Steppermotor.iTargetPosition = iTargetPosition;
 }
 
 void fSteppermotor_Execute () {

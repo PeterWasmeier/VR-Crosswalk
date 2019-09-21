@@ -56,8 +56,9 @@ void fGY271_Read_Values () {
     case 6:   if (FootprintRight.GY271[5].Valid)
               {
                 fCalculate_GY271_CenterOfFootplate (&FootprintRight);
-                FootprintRight.SensorOffset.X = -round(FootprintRight.SensorOffset.X); // For unknown reason, this value is inverted
-                FootprintRight.SensorOffset.Y = -round(FootprintRight.SensorOffset.Y);
+                FootprintRight.SensorOffset.X = -round(FootprintRight.SensorOffset.X); // the right plate is upside down
+                FootprintRight.SensorOffset.Y = -round(FootprintRight.SensorOffset.Y); // the right plate is upside down
+                FootprintRight.SensorOffsetValid=true;
                 bIndex=0;
               }
   }

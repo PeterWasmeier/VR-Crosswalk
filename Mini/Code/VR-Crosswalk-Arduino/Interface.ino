@@ -53,6 +53,8 @@ void fInterface_ExecuteCommand () {
     fMotor_TurnOff ();
     fSteppermotor_TurnOff ();
     bGO_R_Command_Active=false;
+    bGO_R_Command_Always=false;
+    bGO_R_Command_Once=false;
   }
   else
   if (strcmp (Interface.cCommand,"OFFSET_R")==0) {
@@ -60,60 +62,82 @@ void fInterface_ExecuteCommand () {
     FootprintRight.Offset.Y=-FootprintRight.SensorOffset.Y;
   }
   else
+  if (strcmp (Interface.cCommand,"MOVE")==0)  {
+    bGO_R_Command_Once=true;
+    bGO_R_Command_Active=true;
+    bGO_R_Command_Always=false;
+  }
+  else
   if (strcmp (Interface.cCommand,"MOVE_R")==0) {
-    FootprintRight.Destination.X = FootprintRight.Current.X + 10;
-    FootprintRight.Destination.Y = FootprintRight.Current.Y;
+    FootprintRight.Destination.X = FootprintRight.Destination.X + 10;
+    FootprintRight.Destination.Y = FootprintRight.Destination.Y;
     fCNC_SetDestination  (FootprintRight.Destination.X,FootprintRight.Destination.Y); // Units in mm
     fMotor_setTargetPosition ( fCNC_CalculatePrimaryAxis () );
-    fSteppermotor_setTargetPosition (fCNC_CalculateSecondaryAxis(Motor.iEncoderPosition), true);
+    fSteppermotor_setTargetPosition (fCNC_CalculateSecondaryAxis(Motor.iTargetPosition/*Motor.iEncoderPosition*/), true);
+    
     fSteppermotor_TurnOn();
     fMotor_TurnOn();
     bGO_R_Command_Active=true;
+    bGO_R_Command_Once=false;
+    bGO_R_Command_Always=false;
   }
   else
   if (strcmp (Interface.cCommand,"MOVE_L")==0) {
-    FootprintRight.Destination.X = FootprintRight.Current.X - 10;
-    FootprintRight.Destination.Y = FootprintRight.Current.Y;
+    FootprintRight.Destination.X = FootprintRight.Destination.X - 10;
+    FootprintRight.Destination.Y = FootprintRight.Destination.Y;
     fCNC_SetDestination  (FootprintRight.Destination.X,FootprintRight.Destination.Y); // Units in mm
     fMotor_setTargetPosition ( fCNC_CalculatePrimaryAxis () );
-    fSteppermotor_setTargetPosition (fCNC_CalculateSecondaryAxis(Motor.iEncoderPosition), true);
+    fSteppermotor_setTargetPosition (fCNC_CalculateSecondaryAxis(Motor.iTargetPosition/*Motor.iEncoderPosition*/), true);
+
     fSteppermotor_TurnOn();
     fMotor_TurnOn();
     bGO_R_Command_Active=true;
+    bGO_R_Command_Once=false;
+    bGO_R_Command_Always=false;
   }
   else
   if (strcmp (Interface.cCommand,"MOVE_U")==0) {
-    FootprintRight.Destination.X = FootprintRight.Current.X;
-    FootprintRight.Destination.Y = FootprintRight.Current.Y + 10;
+    FootprintRight.Destination.X = FootprintRight.Destination.X;
+    FootprintRight.Destination.Y = FootprintRight.Destination.Y + 10;
     fCNC_SetDestination  (FootprintRight.Destination.X,FootprintRight.Destination.Y); // Units in mm
     fMotor_setTargetPosition ( fCNC_CalculatePrimaryAxis () );
-    fSteppermotor_setTargetPosition (fCNC_CalculateSecondaryAxis(Motor.iEncoderPosition), true);
+    fSteppermotor_setTargetPosition (fCNC_CalculateSecondaryAxis(Motor.iTargetPosition/*Motor.iEncoderPosition*/), true);
+
     fSteppermotor_TurnOn();
     fMotor_TurnOn();
     bGO_R_Command_Active=true;
+    bGO_R_Command_Once=false;
+    bGO_R_Command_Always=false;
   }
   else
   if (strcmp (Interface.cCommand,"MOVE_D")==0) {
-    FootprintRight.Destination.X = FootprintRight.Current.X;
-    FootprintRight.Destination.Y = FootprintRight.Current.Y - 10;
+    FootprintRight.Destination.X = FootprintRight.Destination.X;
+    FootprintRight.Destination.Y = FootprintRight.Destination.Y - 10;
     fCNC_SetDestination  (FootprintRight.Destination.X,FootprintRight.Destination.Y); // Units in mm
     fMotor_setTargetPosition ( fCNC_CalculatePrimaryAxis () );
-    fSteppermotor_setTargetPosition (fCNC_CalculateSecondaryAxis(Motor.iEncoderPosition), true);
+    fSteppermotor_setTargetPosition (fCNC_CalculateSecondaryAxis(Motor.iTargetPosition/*Motor.iEncoderPosition*/), true);
+
     fSteppermotor_TurnOn();
     fMotor_TurnOn();
     bGO_R_Command_Active=true;
+    bGO_R_Command_Once=false;
+    bGO_R_Command_Always=false;
   }
   else
   if (strcmp (Interface.cCommand,"GO_R")==0) {    
     // Turn all the axis on:
     FootprintRight.Destination.X = FootprintRight.Current.X + FootprintRight.SensorOffset.X + FootprintRight.Offset.X;
     FootprintRight.Destination.Y = FootprintRight.Current.Y + FootprintRight.SensorOffset.Y + FootprintRight.Offset.Y;
+
     fCNC_SetDestination  (FootprintRight.Destination.X,FootprintRight.Destination.Y); // Units in mm
     fMotor_setTargetPosition ( fCNC_CalculatePrimaryAxis () );
-    fSteppermotor_setTargetPosition (fCNC_CalculateSecondaryAxis(Motor.iEncoderPosition), true);
+    fSteppermotor_setTargetPosition (fCNC_CalculateSecondaryAxis(Motor.iTargetPosition/*Motor.iEncoderPosition*/), true);
+
     fSteppermotor_TurnOn();
     fMotor_TurnOn();
     bGO_R_Command_Active=true;
+    bGO_R_Command_Always=true;
+    bGO_R_Command_Once=false;
   }
 }
 

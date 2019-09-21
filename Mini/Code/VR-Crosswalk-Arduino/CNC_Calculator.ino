@@ -1,15 +1,20 @@
 
-void fCNC_SetCurrent (double CurrentX, double CurrentY) {
-  CNC.dDestinationX = CurrentX;
-  CNC.dDestinationY = CurrentY;
+void fCNC_SetCurrent (int CurrentX, int CurrentY) {
+  CNC.iPreviousDestinationX = CurrentX;
+  CNC.iPreviousDestinationY = CurrentY;
 }
 
-void fCNC_SetDestination (double DestinationX, double DestinationY) {
-  CNC.dDestinationX = DestinationX;
-  CNC.dDestinationY = DestinationY;
+void fCNC_SetDestination (int DestinationX, int DestinationY) {
+  if ((CNC.iDestinationX!=DestinationX)||(CNC.iDestinationY!=DestinationY))
+  {
+    CNC.iPreviousDestinationX = CNC.iDestinationX;
+    CNC.iPreviousDestinationY = CNC.iDestinationY;
+    CNC.iDestinationX = DestinationX;
+    CNC.iDestinationY = DestinationY;
+  }
 }
 
-void fCNC_GetCurrentXY (long lCurrentPositionPrimaryAxis, long lCurrentPositionSecondaryAxis, double *X, double *Y) {
+void fCNC_GetCurrentXY (long lCurrentPositionPrimaryAxis, long lCurrentPositionSecondaryAxis, int *X, int *Y) {
   double dAlpha;
   double dAlphaRadiant;
   double dX;
@@ -23,22 +28,51 @@ void fCNC_GetCurrentXY (long lCurrentPositionPrimaryAxis, long lCurrentPositionS
   *X = dX;
   *Y = dY;
 }
-  
-long fCNC_CalculatePrimaryAxis () {
-  // Where to go with the primary axis?
+
+double fCNC_CalculateDegree (double dX, double dY)
+{
   double dAlphaRadiant;
   double dAlpha;
-  double dPosition;
-  long lPosition;
-  if (CNC.dDestinationX==0.0) 
+  if (dX==0)
   {
-    if (CNC.dDestinationY>0) return ENCODER_PULSES_PER_90DEGREE; // +90°
-    if (CNC.dDestinationY<0) return -ENCODER_PULSES_PER_90DEGREE; // -90°
-    return 0; // This might be wrong and should never happen, have to fix this one later XXX
+    if (dY>0)
+      return 90;
+    else
+      return 270;
   }
-  dAlphaRadiant = atan (CNC.dDestinationY / CNC.dDestinationX);  // Result will be -PI/2 .... +PI/2  
+  dAlphaRadiant = atan (dY / dX);  // Result will be -PI/2 .... +PI/2
   dAlpha = (dAlphaRadiant / PI) * 180;                   // Result will be -90° ... +90°
-  dPosition = (ENCODER_PULSES_PER_90DEGREE / 90.0) * dAlpha;                   // Convert from degree to Units (-600 ... +600)
+  if (dX<0)
+    dAlpha = 180 + dAlpha;
+  if (dAlpha<0)
+    dAlpha = 360 + dAlpha;
+  return dAlpha;
+}
+
+int fCNC_CalculatePrimaryAxis () {
+  // Where to go with the primary axis?
+  double dAlphaRadiant;
+  double dAlphaDestination;
+  double dAlphaPreviousDestination;
+  double dAlphaDeltaLeftTurn;
+  double dAlphaDeltaRightTurn;
+  double dAlpha;
+  double dPosition;
+  double dX;
+  double dY;
+  long lPosition;
+  dAlphaPreviousDestination = fCNC_CalculateDegree (CNC.iPreviousDestinationX, CNC.iPreviousDestinationY);
+  dAlphaDestination = fCNC_CalculateDegree (CNC.iDestinationX, CNC.iDestinationY);
+
+  if (dAlphaDestination<dAlphaPreviousDestination) dAlphaDestination=dAlphaDestination+360;
+
+  dAlphaDeltaLeftTurn=(dAlphaDestination-dAlphaPreviousDestination);
+  dAlphaDeltaRightTurn=360-dAlphaDeltaLeftTurn;
+
+  if (dAlphaDeltaLeftTurn<dAlphaDeltaRightTurn)
+    dPosition = Motor.iTargetPosition + ((ENCODER_PULSES_PER_90DEGREE / 90.0) * dAlphaDeltaLeftTurn);
+  else
+    dPosition = Motor.iTargetPosition - ((ENCODER_PULSES_PER_90DEGREE / 90.0) * dAlphaDeltaRightTurn);
   lPosition = dPosition;
   return lPosition;
 }
@@ -62,10 +96,10 @@ long fCNC_CalculateSecondaryAxis (long lCurrentPositionPrimaryAxis) {
   double dX2_Minus_dX1;
   double dY2_Minus_dY1;
   
-  dX1 = 30.0;
-  dY1 = 0;
-  dX2 = CNC.dDestinationX;
-  dY2 = CNC.dDestinationY; 
+  dX1 = CNC.iPreviousDestinationX;
+  dY1 = CNC.iPreviousDestinationY;
+  dX2 = CNC.iDestinationX;
+  dY2 = CNC.iDestinationY; 
 
   dAlpha = (90.0 / ENCODER_PULSES_PER_90DEGREE) * lCurrentPositionPrimaryAxis; // Result will be -90° ... +90° (-600 ... +600 Units)
   dAlphaRadiant = dAlpha * (PI / 180.0);                 // Result is now in radiant
@@ -85,15 +119,16 @@ long fCNC_CalculateSecondaryAxis (long lCurrentPositionPrimaryAxis) {
     dTanAlpha_Minus_dM = dTanAlpha-dM;
     if (dTanAlpha_Minus_dM==0.0)
     {
-      // Special case, at alpha=0 and m=0: 
-      lResult = CNC.dDestinationX * 5;                          // Convert from mm to Units
+      // Special case: the primary axis is parallel to the route from source to target. So, no solution, return the current value: 
+      lResult = CNC.iDestinationX * 5;
     }
     else
     {
-      dX = dB / dTanAlpha_Minus_dM;    
+      dX = dB / dTanAlpha_Minus_dM;
       dY = (dTanAlpha * dB) / dTanAlpha_Minus_dM;
       dResult = sqrt ( (dX * dX) + (dY * dY) );
       lResult = dResult * 5;                                // Convert from mm to Units
+      // Keep in mind: there might be a special case, when the primary axis is not cutting the route, in this case the result will be zero
     }
   }
   return lResult;

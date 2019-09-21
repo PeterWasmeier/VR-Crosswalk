@@ -34,9 +34,9 @@ void fLogging () {
     Logging.iServoLeftPosition=iServoLeftPosition;
     Serial.print ("SERVO_L_POS;"); Serial.println (Logging.iServoLeftPosition);
   }
-  if ((Logging.iServoRightPosition!=iServoRightPosition)||(bRequestAll))
+  if ((Logging.iServoRightPosition!=FootprintRight.iServoPosition)||(bRequestAll))
   {
-    Logging.iServoRightPosition=iServoRightPosition;
+    Logging.iServoRightPosition=FootprintRight.iServoPosition;
     Serial.print ("SERVO_R_POS;"); Serial.println (Logging.iServoRightPosition);
   }
   if ((Logging.bMotor_LastPIDValue!=Motor.bLastPIDValue)||(bRequestAll))
@@ -67,16 +67,18 @@ void fLogging () {
 
   if (bSendGY271==true)
   {
-    lX = (FootprintRight.SensorOffset.X+FootprintRight.Offset.X)*1000;
-    lY = (FootprintRight.SensorOffset.Y+FootprintRight.Offset.Y)*1000; 
-    llX= (Logging.FootplateRight_SensorOffset.X+FootprintRight.Offset.X)*1000;
-    llY= (Logging.FootplateRight_SensorOffset.Y+FootprintRight.Offset.Y)*1000;
-    {
-      Logging.FootplateRight_SensorOffset.X=FootprintRight.SensorOffset.X;
-      Logging.FootplateRight_SensorOffset.Y=FootprintRight.SensorOffset.Y;
-      Serial.print ("FOOT_R_X;"); Serial.println (lX);
-      Serial.print ("FOOT_R_Y;"); Serial.println (lY);    
-    }
+    lX = FootprintRight.SensorOffset.X+FootprintRight.Offset.X;
+    lY = FootprintRight.SensorOffset.Y+FootprintRight.Offset.Y; 
+    Serial.print ("FOOT_R_X;"); Serial.println (lX);
+    Serial.print ("FOOT_R_Y;"); Serial.println (lY); 
+    lX = FootprintRight.Current.X;
+    lY = FootprintRight.Current.Y;
+    Serial.print ("FOOT_C_X;"); Serial.println (lX);   
+    Serial.print ("FOOT_C_Y;"); Serial.println (lY);   
+    lX = FootprintRight.Destination.X;
+    lY = FootprintRight.Destination.Y;
+    Serial.print ("FOOT_D_X;"); Serial.println (lX);   
+    Serial.print ("FOOT_D_Y;"); Serial.println (lY);   
   }
   
   bRequestAll=false;

@@ -1,4 +1,6 @@
 void setup(){
+  int X;
+  int Y;
   Serial.begin(115200);
   while(!Serial)
   {

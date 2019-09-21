@@ -1,4 +1,77 @@
-bool fCalculate_Intersection (double a1, double b1, double S1x, double S1y, double a2, double b2, double S2x, double S2y, tPosition *Position) {
+void RotatePoint (int iPointX, int iPointY, double dDegree, int *iResultX, int *iResultY)
+{
+  // Calculate the current angle:
+  double dRadius;
+  double dCurrentAngleRadiant;
+  double dCurrentAngle;
+  double dDestinationAgle;
+  double dDestinationAgleRadiant;
+  double dX;
+  double dY;
+  double dPointX;
+
+  dRadius = sqrt ( iPointX*iPointX + iPointY*iPointY );
+  if (dRadius==0.0)
+  {
+    *iResultX = iPointX;
+    *iResultY = iPointY;
+    return;
+  }
+  dPointX=iPointX;
+  dCurrentAngleRadiant = acos ( dPointX / dRadius );
+  if (iPointY<0) dCurrentAngleRadiant=-dCurrentAngleRadiant;
+  dCurrentAngle = (dCurrentAngleRadiant / M_PI) * 180;
+  dDestinationAgle = dCurrentAngle + dDegree;
+  dDestinationAgleRadiant = dDestinationAgle * (M_PI / 180.0);
+
+  dX = cos ( dDestinationAgleRadiant ) * dRadius;
+  dY = sin ( dDestinationAgleRadiant ) * dRadius;
+
+  *iResultX = dX;
+  *iResultY = dY;
+}
+
+void fAverageMedianXY (int *iValueX, int *iValueY)
+{
+  static int iPreviousValueX;
+  static int iPreviousValueY;
+  static int iMedianX[5];
+  static int iMedianY[5];
+  static byte bIndex=0;
+  byte bSorted[5]={0,1,2,3,4};
+  byte bi;
+  byte bTemp;
+  iMedianX[bIndex]=*iValueX;
+  iMedianY[bIndex]=*iValueY;
+  bIndex++;
+  if (bIndex>4) bIndex=0;
+  for (bi=0;bi<4;bi++)
+  {
+    if (iMedianX[bSorted[bi]]>iMedianX[bSorted[bi+1]]) {
+      bTemp=bSorted[bi];
+      bSorted[bi]=bSorted[bi+1];
+      bSorted[bi+1]=bTemp;
+      bi=255;
+    }
+  }
+  *iValueX=iMedianX[bSorted[2]];
+  //*iValueX=(iMedianX[bSorted[2]] + iPreviousValueX) >> 1;
+  //iPreviousValueX = *iValueX;
+  for (bi=0;bi<4;bi++)
+  {
+    if (iMedianY[bSorted[bi]]>iMedianY[bSorted[bi+1]]) {
+      bTemp=bSorted[bi];
+      bSorted[bi]=bSorted[bi+1];
+      bSorted[bi+1]=bTemp;
+      bi=255;
+    }
+  }
+  *iValueY=iMedianY[bSorted[2]];
+  //*iValueY=(iMedianY[bSorted[2]] + iPreviousValueY) >> 1;
+  //iPreviousValueY = *iValueY;
+}
+
+bool fCalculate_Intersection (double a1, double b1, double S1x, double S1y, double a2, double b2, double S2x, double S2y, tPositionDouble *Position) {
   double C1;
   double C2;
   double M1;
@@ -39,14 +112,14 @@ double fCalculate_Distance (double x1, double y1, double x2, double y2) {
 }
 
 bool fCalculate_GY271_CenterOfFootplate (tFootplate *Footplate) {
-  tPosition Intersection_S0S1;
-  tPosition Intersection_S0S2;
-  tPosition Intersection_S1S2;
-  tPosition Intersection_S3S4;
-  tPosition Intersection_S3S5;
-  tPosition Intersection_S4S5;
-  tPosition NorthPole;
-  tPosition SouthPole;
+  tPositionDouble Intersection_S0S1;
+  tPositionDouble Intersection_S0S2;
+  tPositionDouble Intersection_S1S2;
+  tPositionDouble Intersection_S3S4;
+  tPositionDouble Intersection_S3S5;
+  tPositionDouble Intersection_S4S5;
+  tPositionDouble NorthPole;
+  tPositionDouble SouthPole;
 
   // UPPER FOOTPLATE:
   
@@ -158,12 +231,9 @@ bool fCalculate_GY271_CenterOfFootplate (tFootplate *Footplate) {
   // CALCULATE ANGLE OF FOOTPLATE
   Distance_South_North = fCalculate_Distance ( NorthPole.X, NorthPole.Y,
                                                SouthPole.X, SouthPole.Y);
-  //Serial.print ("NorthPole.X/Y="); Serial.print (NorthPole.X); Serial.print ("/"); Serial.println (NorthPole.Y);
-  //Serial.print ("SouthPole.X/Y="); Serial.print (SouthPole.X); Serial.print ("/"); Serial.println (SouthPole.Y);
   dAlphaRadiant = acos ((NorthPole.X-SouthPole.X)/Distance_South_North);
   dAlpha = (dAlphaRadiant / PI) * 180;                   // Result will be -90° ... +90°
   Footplate->Alpha = dAlpha;
-  Footplate->SensorOffsetValid=true;
   
   return true;
 }
