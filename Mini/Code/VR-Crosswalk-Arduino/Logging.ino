@@ -29,14 +29,16 @@ void fLogging () {
     Logging.iFootprintRight_Alpha=FootprintRight.Alpha;
     Serial.print ("FOOT_R_A;"); Serial.println (Logging.iFootprintRight_Alpha);    
   }
-  if ((Logging.iServoLeftPosition!=iServoLeftPosition)||(bRequestAll))
+  /*
+  if ((Logging.iServoLeftPosition!=sServoLeft.readMicroseconds())||(bRequestAll))
   {
-    Logging.iServoLeftPosition=iServoLeftPosition;
+    Logging.iServoLeftPosition=sServoLeft.readMicroseconds();
     Serial.print ("SERVO_L_POS;"); Serial.println (Logging.iServoLeftPosition);
   }
-  if ((Logging.iServoRightPosition!=FootprintRight.iServoPosition)||(bRequestAll))
+  */
+  if ((Logging.iServoRightPosition!=sServoRight.readMicroseconds())||(bRequestAll))
   {
-    Logging.iServoRightPosition=FootprintRight.iServoPosition;
+    Logging.iServoRightPosition=sServoRight.readMicroseconds();
     Serial.print ("SERVO_R_POS;"); Serial.println (Logging.iServoRightPosition);
   }
   if ((Logging.bMotor_LastPIDValue!=Motor.bLastPIDValue)||(bRequestAll))
@@ -54,14 +56,14 @@ void fLogging () {
     Logging.iMotor_EncoderPosition=Motor.iEncoderPosition;
     Serial.print ("MOTOR_ENCODER;"); Serial.println (Logging.iMotor_EncoderPosition);    
   }
-  if ((Logging.iSteppermotor_CurrentPosition!=Steppermotor.iCurrentPosition)||(bRequestAll))
+  if ((Logging.iSteppermotor_CurrentPosition!=sStepper.readSteps())||(bRequestAll))
   {
-    Logging.iSteppermotor_CurrentPosition=Steppermotor.iCurrentPosition;
+    Logging.iSteppermotor_CurrentPosition=sStepper.readSteps();
     Serial.print ("STEPPER_POSITION;"); Serial.println (Logging.iSteppermotor_CurrentPosition);    
   }
-  if ((Logging.iSteppermotor_TargetPosition!=Steppermotor.iTargetPosition)||(bRequestAll))
+  if ((Logging.iSteppermotor_TargetPosition!=sStepper.readSteps ())||(bRequestAll))
   {
-    Logging.iSteppermotor_TargetPosition=Steppermotor.iTargetPosition;
+    Logging.iSteppermotor_TargetPosition=Steppermotor_iTargetPosition;
     Serial.print ("STEPPER_TARGET;"); Serial.println (Logging.iSteppermotor_TargetPosition);    
   }
 
@@ -69,8 +71,8 @@ void fLogging () {
   {
     lX = FootprintRight.SensorOffset.X+FootprintRight.Offset.X;
     lY = FootprintRight.SensorOffset.Y+FootprintRight.Offset.Y; 
-    Serial.print ("FOOT_R_X;"); Serial.println (lX);
-    Serial.print ("FOOT_R_Y;"); Serial.println (lY); 
+    Serial.print ("FOOT_S_X;"); Serial.println (lX);
+    Serial.print ("FOOT_S_Y;"); Serial.println (lY); 
     lX = FootprintRight.Current.X;
     lY = FootprintRight.Current.Y;
     Serial.print ("FOOT_C_X;"); Serial.println (lX);   

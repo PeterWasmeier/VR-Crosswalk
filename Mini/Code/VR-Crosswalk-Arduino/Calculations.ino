@@ -55,8 +55,8 @@ void fAverageMedianXY (int *iValueX, int *iValueY)
     }
   }
   *iValueX=iMedianX[bSorted[2]];
-  //*iValueX=(iMedianX[bSorted[2]] + iPreviousValueX) >> 1;
-  //iPreviousValueX = *iValueX;
+  *iValueX=(*iValueX + iPreviousValueX) >> 1;
+  iPreviousValueX = *iValueX;
   for (bi=0;bi<4;bi++)
   {
     if (iMedianY[bSorted[bi]]>iMedianY[bSorted[bi+1]]) {
@@ -67,8 +67,8 @@ void fAverageMedianXY (int *iValueX, int *iValueY)
     }
   }
   *iValueY=iMedianY[bSorted[2]];
-  //*iValueY=(iMedianY[bSorted[2]] + iPreviousValueY) >> 1;
-  //iPreviousValueY = *iValueY;
+  *iValueY=(*iValueY + iPreviousValueY) >> 1;
+  iPreviousValueY = *iValueY;
 }
 
 bool fCalculate_Intersection (double a1, double b1, double S1x, double S1y, double a2, double b2, double S2x, double S2y, tPositionDouble *Position) {

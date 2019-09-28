@@ -8,6 +8,7 @@ void fGY271_Read_Value (tGY271 *pGY271) {
 
 void fGY271_Read_Values () {
   static byte bIndex=0;
+  double dDegreeFootprintRight;
   // RIGHT FOOTPRINT:
   // ~~~~~~~~~~~~~~~~
   // Keep in mind: because the footplate is upside down, X and Y must be inverted
@@ -58,6 +59,16 @@ void fGY271_Read_Values () {
                 fCalculate_GY271_CenterOfFootplate (&FootprintRight);
                 FootprintRight.SensorOffset.X = -round(FootprintRight.SensorOffset.X); // the right plate is upside down
                 FootprintRight.SensorOffset.Y = -round(FootprintRight.SensorOffset.Y); // the right plate is upside down
+                dDegreeFootprintRight = sServoRight.readMicroseconds() - SERVO_RIGHT_MIDDLE; 
+                if (dDegreeFootprintRight<SERVO_RIGHT_MIDDLE) dDegreeFootprintRight = map (dDegreeFootprintRight, SERVO_RIGHT_MINUS45, SERVO_RIGHT_MIDDLE, 900, 1500); else
+                  if (dDegreeFootprintRight>SERVO_RIGHT_MIDDLE) dDegreeFootprintRight = map (dDegreeFootprintRight, SERVO_RIGHT_MIDDLE, SERVO_RIGHT_PLUS45, 1500, 2100); else dDegreeFootprintRight=1500;  
+                dDegreeFootprintRight = 45.0/600.0 * dDegreeFootprintRight;
+                dDegreeFootprintRight=dDegreeFootprintRight-fMotor_CalculateDegree (Motor.iEncoderPosition);
+                RotatePoint ( FootprintRight.SensorOffset.X, 
+                              FootprintRight.SensorOffset.Y,
+                              -dDegreeFootprintRight,
+                              &FootprintRight.SensorOffset.X,
+                              &FootprintRight.SensorOffset.Y);
                 FootprintRight.SensorOffsetValid=true;
                 bIndex=0;
               }

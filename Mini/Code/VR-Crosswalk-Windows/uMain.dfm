@@ -1,8 +1,8 @@
 object frmMain: TfrmMain
-  Left = 221
-  Top = 106
-  Width = 1156
-  Height = 804
+  Left = 336
+  Top = 30
+  Width = 1237
+  Height = 760
   Caption = 'VR-Crosswalk-MINI'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -16,24 +16,24 @@ object frmMain: TfrmMain
   TextHeight = 13
   object Splitter1: TSplitter
     Left = 0
-    Top = 745
-    Width = 1148
+    Top = 701
+    Width = 1229
     Height = 5
     Cursor = crVSplit
     Align = alBottom
   end
   object Splitter4: TSplitter
     Left = 0
-    Top = 508
-    Width = 1148
+    Top = 464
+    Width = 1229
     Height = 3
     Cursor = crVSplit
     Align = alBottom
   end
   object Panel7: TPanel
     Left = 0
-    Top = 511
-    Width = 1148
+    Top = 467
+    Width = 1229
     Height = 234
     Align = alBottom
     Caption = 'Panel6'
@@ -41,7 +41,7 @@ object frmMain: TfrmMain
     object PageControl1: TPageControl
       Left = 1
       Top = 1
-      Width = 1146
+      Width = 1227
       Height = 232
       ActivePage = TabSheet1
       Align = alClient
@@ -52,7 +52,7 @@ object frmMain: TfrmMain
         object Chart1: TChart
           Left = 0
           Top = 0
-          Width = 1138
+          Width = 1219
           Height = 204
           BackWall.Brush.Color = clWhite
           BackWall.Brush.Style = bsClear
@@ -188,22 +188,22 @@ object frmMain: TfrmMain
   object Panel5: TPanel
     Left = 0
     Top = 0
-    Width = 1148
-    Height = 508
+    Width = 1229
+    Height = 464
     Align = alClient
     TabOrder = 1
     object Splitter3: TSplitter
       Left = 465
       Top = 1
       Width = 3
-      Height = 506
+      Height = 462
       Cursor = crHSplit
     end
     object Panel1: TPanel
       Left = 1
       Top = 1
       Width = 464
-      Height = 506
+      Height = 462
       Align = alLeft
       Color = clWhite
       TabOrder = 0
@@ -211,7 +211,7 @@ object frmMain: TfrmMain
         Left = 1
         Top = 1
         Width = 462
-        Height = 504
+        Height = 460
         Align = alClient
         AutoSize = True
         Center = True
@@ -41063,22 +41063,22 @@ object frmMain: TfrmMain
     object Panel2: TPanel
       Left = 468
       Top = 1
-      Width = 679
-      Height = 506
+      Width = 760
+      Height = 462
       Align = alClient
       TabOrder = 1
       object Splitter2: TSplitter
         Left = 1
-        Top = 421
-        Width = 677
+        Top = 377
+        Width = 758
         Height = 5
         Cursor = crVSplit
         Align = alBottom
       end
       object Panel3: TPanel
         Left = 1
-        Top = 426
-        Width = 677
+        Top = 382
+        Width = 758
         Height = 79
         Align = alBottom
         Caption = 'Panel3'
@@ -41086,7 +41086,7 @@ object frmMain: TfrmMain
         object Memo1: TMemo
           Left = 1
           Top = 1
-          Width = 675
+          Width = 756
           Height = 77
           Align = alClient
           ReadOnly = True
@@ -41098,22 +41098,22 @@ object frmMain: TfrmMain
       object Panel4: TPanel
         Left = 1
         Top = 1
-        Width = 677
-        Height = 420
+        Width = 758
+        Height = 376
         Align = alClient
         TabOrder = 1
         object Splitter5: TSplitter
           Left = 1
-          Top = 275
-          Width = 675
+          Top = 231
+          Width = 756
           Height = 3
           Cursor = crVSplit
           Align = alBottom
         end
         object Panel10: TPanel
           Left = 1
-          Top = 278
-          Width = 675
+          Top = 234
+          Width = 756
           Height = 141
           Align = alBottom
           Caption = 'Panel10'
@@ -41121,7 +41121,7 @@ object frmMain: TfrmMain
           object ListView1: TListView
             Left = 1
             Top = 1
-            Width = 673
+            Width = 754
             Height = 139
             Align = alClient
             Columns = <
@@ -41140,8 +41140,8 @@ object frmMain: TfrmMain
         object Panel11: TPanel
           Left = 1
           Top = 1
-          Width = 675
-          Height = 274
+          Width = 756
+          Height = 230
           Align = alClient
           TabOrder = 1
           object Label1: TLabel
@@ -41219,6 +41219,7 @@ object frmMain: TfrmMain
             Top = 40
             Width = 65
             Height = 22
+            MaxValue = 2399
             TabOrder = 3
           end
           object btnMotor: TButton
@@ -41230,22 +41231,13 @@ object frmMain: TfrmMain
             TabOrder = 4
             OnClick = btnMotorClick
           end
-          object Button2: TButton
-            Left = 176
-            Top = 8
-            Width = 75
-            Height = 25
-            Caption = 'Test'
-            TabOrder = 5
-            OnClick = Button2Click
-          end
           object btnP: TButton
             Left = 264
             Top = 72
             Width = 145
             Height = 25
             Caption = 'PID: set P value to:'
-            TabOrder = 6
+            TabOrder = 5
             OnClick = btnPClick
           end
           object csP: TCSpinEdit
@@ -41254,7 +41246,7 @@ object frmMain: TfrmMain
             Width = 65
             Height = 22
             MaxValue = 200000
-            TabOrder = 7
+            TabOrder = 6
             Value = 10000
           end
           object btnI: TButton
@@ -41263,7 +41255,7 @@ object frmMain: TfrmMain
             Width = 145
             Height = 25
             Caption = 'PID: set I value to:'
-            TabOrder = 8
+            TabOrder = 7
             OnClick = btnIClick
           end
           object csI: TCSpinEdit
@@ -41271,7 +41263,7 @@ object frmMain: TfrmMain
             Top = 104
             Width = 65
             Height = 22
-            TabOrder = 9
+            TabOrder = 8
             Value = 500
           end
           object btnD: TButton
@@ -41280,7 +41272,7 @@ object frmMain: TfrmMain
             Width = 145
             Height = 25
             Caption = 'PID: set D value to:'
-            TabOrder = 10
+            TabOrder = 9
             OnClick = btnDClick
           end
           object csD: TCSpinEdit
@@ -41288,7 +41280,7 @@ object frmMain: TfrmMain
             Top = 136
             Width = 65
             Height = 22
-            TabOrder = 11
+            TabOrder = 10
             Value = 500
           end
           object btnStepperACC: TButton
@@ -41297,7 +41289,7 @@ object frmMain: TfrmMain
             Width = 145
             Height = 25
             Caption = 'Set stepper acceleraton'
-            TabOrder = 12
+            TabOrder = 11
             OnClick = btnStepperACCClick
           end
           object csStepperACC: TCSpinEdit
@@ -41307,7 +41299,7 @@ object frmMain: TfrmMain
             Height = 22
             MaxValue = 999999999
             MinValue = 1
-            TabOrder = 13
+            TabOrder = 12
             Value = 10
           end
           object btnSTATUS: TButton
@@ -41316,7 +41308,7 @@ object frmMain: TfrmMain
             Width = 145
             Height = 25
             Caption = 'read status'
-            TabOrder = 14
+            TabOrder = 13
             OnClick = btnSTATUSClick
           end
           object btnMotor0: TButton
@@ -41325,7 +41317,7 @@ object frmMain: TfrmMain
             Width = 145
             Height = 25
             Caption = 'Move motor to 0'
-            TabOrder = 15
+            TabOrder = 14
             OnClick = btnMotor0Click
           end
           object btnMotor100: TButton
@@ -41334,7 +41326,7 @@ object frmMain: TfrmMain
             Width = 145
             Height = 25
             Caption = 'Move motor to 100'
-            TabOrder = 16
+            TabOrder = 15
             OnClick = btnMotor100Click
           end
           object btnGOR: TButton
@@ -41344,7 +41336,7 @@ object frmMain: TfrmMain
             Height = 25
             Caption = 'go right footplate'
             Default = True
-            TabOrder = 17
+            TabOrder = 16
             OnClick = btnGORClick
           end
           object btnStepper250: TButton
@@ -41353,7 +41345,7 @@ object frmMain: TfrmMain
             Width = 145
             Height = 25
             Caption = 'Move stepper to 250'
-            TabOrder = 18
+            TabOrder = 17
             OnClick = btnStepper250Click
           end
           object btnOffset_R: TButton
@@ -41362,43 +41354,43 @@ object frmMain: TfrmMain
             Width = 145
             Height = 25
             Caption = 'offset right footplate'
-            TabOrder = 19
+            TabOrder = 18
             OnClick = btnOffset_RClick
           end
           object btnUp: TButton
-            Left = 64
-            Top = 184
+            Left = 184
+            Top = 176
             Width = 41
             Height = 25
             Caption = 'UP'
-            TabOrder = 20
+            TabOrder = 19
             OnClick = btnUpClick
           end
           object btnDown: TButton
-            Left = 64
-            Top = 224
+            Left = 184
+            Top = 240
             Width = 41
             Height = 25
             Caption = 'DOWN'
-            TabOrder = 21
+            TabOrder = 20
             OnClick = btnDownClick
           end
           object btnRight: TButton
-            Left = 104
-            Top = 200
+            Left = 256
+            Top = 208
             Width = 41
             Height = 25
             Caption = 'RIGHT'
-            TabOrder = 22
+            TabOrder = 21
             OnClick = btnRightClick
           end
           object btnLeft: TButton
-            Left = 24
-            Top = 200
+            Left = 120
+            Top = 208
             Width = 41
             Height = 25
             Caption = 'LEFT'
-            TabOrder = 23
+            TabOrder = 22
             OnClick = btnLeftClick
           end
           object cbAutoupdate: TCheckBox
@@ -41407,7 +41399,52 @@ object frmMain: TfrmMain
             Width = 81
             Height = 17
             Caption = 'Autoupdate'
+            TabOrder = 23
+          end
+          object btnMOVE: TButton
+            Left = 168
+            Top = 208
+            Width = 75
+            Height = 25
+            Caption = 'MOVE'
             TabOrder = 24
+            OnClick = btnMOVEClick
+          end
+          object btnServoRight_TurnRight: TButton
+            Left = 568
+            Top = 205
+            Width = 41
+            Height = 25
+            Caption = 'RIGHT'
+            TabOrder = 25
+            OnClick = btnServoRight_TurnRightClick
+          end
+          object btnServoRight_TurnLeft: TButton
+            Left = 511
+            Top = 205
+            Width = 41
+            Height = 25
+            Caption = 'LEFT'
+            TabOrder = 26
+            OnClick = btnServoRight_TurnLeftClick
+          end
+          object btnServoLeft_TurnLeft: TButton
+            Left = 351
+            Top = 205
+            Width = 41
+            Height = 25
+            Caption = 'LEFT'
+            TabOrder = 27
+            OnClick = btnServoLeft_TurnLeftClick
+          end
+          object btnServoLeft_TurnRight: TButton
+            Left = 400
+            Top = 205
+            Width = 41
+            Height = 25
+            Caption = 'RIGHT'
+            TabOrder = 28
+            OnClick = btnServoLeft_TurnRightClick
           end
         end
       end

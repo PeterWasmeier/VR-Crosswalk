@@ -25,6 +25,13 @@ void fMotor_setTargetPosition (int iTargetPosition) {
   }
 }
 
+double fMotor_CalculateDegree (int iCurrentPosition) { // iCurrentPosition must be between 0 and 2399
+  double dDegree;
+  dDegree = iCurrentPosition;
+  dDegree = (90.0/ENCODER_PULSES_PER_90DEGREE) * dDegree; 
+  return dDegree;  
+}
+
 int fMotor_getTargetPosition () {
   return Motor.iTargetPosition;
 }
@@ -88,6 +95,8 @@ signed char fMotor_compute() {
   double iTerm;
   double dTerm;
   int iDiff;
+  int iDistanceTurnLeft;
+  int iDistanceTurnRight;
   double dDiff;
 
   ulcurTime = micros();
@@ -101,12 +110,35 @@ signed char fMotor_compute() {
   dsampleTime = ulsampleTime;
   dsampleTime = dsampleTime / 1000000; // fsampleTime is now in seconds
   
-  icurError = Motor.iTargetPosition - Motor.iEncoderPosition;
+  // Have to figure out the direction:
+  // Choose the shortest one
+  iDistanceTurnLeft = Motor.iTargetPosition - Motor.iEncoderPosition;
+  if (iDistanceTurnLeft<0) 
+  {
+    iDistanceTurnRight=-iDistanceTurnLeft;
+    iDistanceTurnLeft = (4*ENCODER_PULSES_PER_90DEGREE)-iDistanceTurnRight;
+  }
+  else
+  {
+    iDistanceTurnRight = (4*ENCODER_PULSES_PER_90DEGREE)-iDistanceTurnLeft;
+  }
+  if (iDistanceTurnLeft<iDistanceTurnRight)
+  {
+    // Turn left is shorter
+    icurError = iDistanceTurnLeft;
+  }
+  else
+  { // Turn right is shorter
+    icurError = -iDistanceTurnRight;
+  }
+  
   dcurError = icurError;
   // Calculate proportional:
   pTerm = Motor.dP * dcurError;
   // Calculate Integral:
   Motor.dIntegral  = Motor.dIntegral + (dcurError*dsampleTime);
+  if (Motor.dIntegral>100) Motor.dIntegral=100;
+  if (Motor.dIntegral<-100) Motor.dIntegral=-100;
   iTerm = Motor.dIntegral * Motor.dI;
   // Calculate differential:
   iDiff = icurError - Motor.iLastError;
@@ -163,9 +195,8 @@ void fMotor_Execute () {
 }
 
 void fMotor_loopCheckEncoderInverted () {
-  int ipwm = 0; 
+  int ipwm = 0;
   long lposition = 0;
-  bool bResult;
   fMotor_TurnOff ();
   delay (1300);
   fMotor_setEncoderInverted (false);
@@ -184,11 +215,7 @@ void fMotor_loopCheckEncoderInverted () {
   if(lposition < 0)
   {
     fMotor_setEncoderInverted (true);
-    bResult=true;
   }
-  else
-    bResult=false;
-  return bResult;
 }
 
 void fMotor_loopAutoTune(void) {
@@ -384,34 +411,48 @@ void fMotor_EncoderInterrupt() {
   if ((bEncoderChannelA==LOW)&&(bEncoderChannelB==HIGH))
   {
     if ((Motor.bEncoderPreviousChannelA==HIGH)&&(Motor.bEncoderPreviousChannelB==HIGH))
-      Motor.iEncoderPosition++;
+      Motor.bCurrentDirection=1;
     else
-      Motor.iEncoderPosition--;
+      Motor.bCurrentDirection=-1;
   }
   else
   if ((bEncoderChannelA==HIGH)&&(bEncoderChannelB==HIGH))
   {
     if ((Motor.bEncoderPreviousChannelA==LOW)&&(Motor.bEncoderPreviousChannelB==HIGH))
-      Motor.iEncoderPosition--;
+      Motor.bCurrentDirection=-1;
     else
-      Motor.iEncoderPosition++;
+      Motor.bCurrentDirection=1;
   }
   else
   if ((bEncoderChannelA==HIGH)&&(bEncoderChannelB==LOW))
   {
     if ((Motor.bEncoderPreviousChannelA==HIGH)&&(Motor.bEncoderPreviousChannelB==HIGH))
-      Motor.iEncoderPosition--;
+      Motor.bCurrentDirection=-1;
     else
-      Motor.iEncoderPosition++;
+      Motor.bCurrentDirection=1;
   }
   else
   if ((bEncoderChannelA==LOW)&&(bEncoderChannelB==LOW))
   {
     if ((Motor.bEncoderPreviousChannelA==HIGH)&&(Motor.bEncoderPreviousChannelB==LOW))
-      Motor.iEncoderPosition--;
+      Motor.bCurrentDirection=-1;
     else
-      Motor.iEncoderPosition++;
+      Motor.bCurrentDirection=1;
   }
+  if (Motor.bCurrentDirection>0)
+  {
+/*    sServoLeft.write (sServoLeft.readMicroseconds()+2);*/
+    Motor.iEncoderPosition++;
+  }
+  else
+  {
+/*    sServoLeft.write (sServoLeft.readMicroseconds()-2);*/
+    Motor.iEncoderPosition--;
+  }
+  if (Motor.iEncoderPosition>=(4*ENCODER_PULSES_PER_90DEGREE))
+    Motor.iEncoderPosition-=(4*ENCODER_PULSES_PER_90DEGREE);
+  if (Motor.iEncoderPosition<0)
+    Motor.iEncoderPosition+=(4*ENCODER_PULSES_PER_90DEGREE);  
   Motor.bEncoderPreviousChannelA = bEncoderChannelA;
   Motor.bEncoderPreviousChannelB = bEncoderChannelB;
   if (Motor.bExecuteIsActive==false) fMotor_Execute ();

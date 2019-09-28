@@ -4,6 +4,11 @@ void fCNC_SetCurrent (int CurrentX, int CurrentY) {
   CNC.iPreviousDestinationY = CurrentY;
 }
 
+/* fCNC_SetDestination
+ *  Use this function to tell both axis where to go.
+ *  Parameters:
+ *  DestinationX/DestinationY: position of the right footplate in mm where to go
+ */
 void fCNC_SetDestination (int DestinationX, int DestinationY) {
   if ((CNC.iDestinationX!=DestinationX)||(CNC.iDestinationY!=DestinationY))
   {
@@ -11,9 +16,22 @@ void fCNC_SetDestination (int DestinationX, int DestinationY) {
     CNC.iPreviousDestinationY = CNC.iDestinationY;
     CNC.iDestinationX = DestinationX;
     CNC.iDestinationY = DestinationY;
+    fMotor_setTargetPosition ( fCNC_CalculatePrimaryAxis () );
+    Steppermotor_iTargetPosition = fCNC_CalculateSecondaryAxis(Motor.iTargetPosition/*Motor.iEncoderPosition*/);
+    sStepper.writeSteps (Steppermotor_iTargetPosition);    
+    fMotor_TurnOn();
   }
 }
 
+/* fCNC_GetCurrentXY
+ *  Calculates, depending on the current position of the primary and secondary axis,
+ *  where the footplate is right now located.
+ *  
+ *  Parameter:
+ *  lCurrentPositionPrimaryAxis: current encoder position of the primary axis
+ *  lCurrentPositionSecondaryAxis: current position of the secondary axis
+ *  *X/*Y: position in mm where the right footplate is located right now
+ */
 void fCNC_GetCurrentXY (long lCurrentPositionPrimaryAxis, long lCurrentPositionSecondaryAxis, int *X, int *Y) {
   double dAlpha;
   double dAlphaRadiant;
@@ -29,8 +47,16 @@ void fCNC_GetCurrentXY (long lCurrentPositionPrimaryAxis, long lCurrentPositionS
   *Y = dY;
 }
 
-double fCNC_CalculateDegree (double dX, double dY)
-{
+/* fCNC_CalculateDegree
+ *  Calculate the amount of degree, from 0 to 359, depending
+ *  on dX and dY, Zero degree = horizontal to the right.
+ *  It is "rotating" counter clockwise.
+ *  
+ *  Parameters:
+ *  dX: Position in X direction in mm
+ *  dY: Position in Y direction in mm
+ */
+double fCNC_CalculateDegree (double dX, double dY) {
   double dAlphaRadiant;
   double dAlpha;
   if (dX==0)
@@ -40,8 +66,8 @@ double fCNC_CalculateDegree (double dX, double dY)
     else
       return 270;
   }
-  dAlphaRadiant = atan (dY / dX);  // Result will be -PI/2 .... +PI/2
-  dAlpha = (dAlphaRadiant / PI) * 180;                   // Result will be -90° ... +90°
+  dAlphaRadiant = atan (dY / dX);
+  dAlpha = (dAlphaRadiant / PI) * 180;
   if (dX<0)
     dAlpha = 180 + dAlpha;
   if (dAlpha<0)
@@ -49,35 +75,38 @@ double fCNC_CalculateDegree (double dX, double dY)
   return dAlpha;
 }
 
+/* fCNC_CalculatePrimaryAxis
+ *  Calculate where the primary axis has to rotate to,
+ *  depending on CNC.iDestinationX and CNC.iDestinationY.
+ *  
+ *  Parameters:
+ *  CNC.iDestinationX/CNC.iDestinationY: destination position of the foot
+ */
 int fCNC_CalculatePrimaryAxis () {
   // Where to go with the primary axis?
   double dAlphaRadiant;
   double dAlphaDestination;
-  double dAlphaPreviousDestination;
   double dAlphaDeltaLeftTurn;
   double dAlphaDeltaRightTurn;
   double dAlpha;
   double dPosition;
   double dX;
   double dY;
-  long lPosition;
-  dAlphaPreviousDestination = fCNC_CalculateDegree (CNC.iPreviousDestinationX, CNC.iPreviousDestinationY);
+  int iPosition;
   dAlphaDestination = fCNC_CalculateDegree (CNC.iDestinationX, CNC.iDestinationY);
-
-  if (dAlphaDestination<dAlphaPreviousDestination) dAlphaDestination=dAlphaDestination+360;
-
-  dAlphaDeltaLeftTurn=(dAlphaDestination-dAlphaPreviousDestination);
-  dAlphaDeltaRightTurn=360-dAlphaDeltaLeftTurn;
-
-  if (dAlphaDeltaLeftTurn<dAlphaDeltaRightTurn)
-    dPosition = Motor.iTargetPosition + ((ENCODER_PULSES_PER_90DEGREE / 90.0) * dAlphaDeltaLeftTurn);
-  else
-    dPosition = Motor.iTargetPosition - ((ENCODER_PULSES_PER_90DEGREE / 90.0) * dAlphaDeltaRightTurn);
-  lPosition = dPosition;
-  return lPosition;
+  dPosition = (ENCODER_PULSES_PER_90DEGREE / 90.0) * dAlphaDestination;
+  iPosition = dPosition;
+  return iPosition;
 }
 
-long fCNC_CalculateSecondaryAxis (long lCurrentPositionPrimaryAxis) {
+/* fCNC_CalculateSecondaryAxis
+ *  Calculate the position of the secondary axis, depending on the
+ *  current position of the primary axis. The secondary axis has
+ *  to follow the primary one.
+ *  Parameter:
+ *  iCurrentPositionPrimaryAxis: current position of the primary axis in units
+ */
+int fCNC_CalculateSecondaryAxis (int iCurrentPositionPrimaryAxis) {
   // Where to go with the secondary axis?
   double dAlpha;
   double dAlphaRadiant;
@@ -101,7 +130,7 @@ long fCNC_CalculateSecondaryAxis (long lCurrentPositionPrimaryAxis) {
   dX2 = CNC.iDestinationX;
   dY2 = CNC.iDestinationY; 
 
-  dAlpha = (90.0 / ENCODER_PULSES_PER_90DEGREE) * lCurrentPositionPrimaryAxis; // Result will be -90° ... +90° (-600 ... +600 Units)
+  dAlpha = (90.0 / ENCODER_PULSES_PER_90DEGREE) * iCurrentPositionPrimaryAxis; // Result will be -90° ... +90° (-600 ... +600 Units)
   dAlphaRadiant = dAlpha * (PI / 180.0);                 // Result is now in radiant
   dX2_Minus_dX1 = dX2-dX1;  
 

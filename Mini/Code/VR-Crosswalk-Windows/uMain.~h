@@ -68,7 +68,6 @@ __published:	// IDE-managed Components
         TCSpinEdit *csStepperPosition;
         TCSpinEdit *csMotorPosition;
         TButton *btnMotor;
-        TButton *Button2;
         TButton *btnP;
         TCSpinEdit *csP;
         TButton *btnI;
@@ -90,6 +89,11 @@ __published:	// IDE-managed Components
         TButton *btnLeft;
         TTimer *Timer2;
         TCheckBox *cbAutoupdate;
+        TButton *btnMOVE;
+        TButton *btnServoRight_TurnRight;
+        TButton *btnServoRight_TurnLeft;
+        TButton *btnServoLeft_TurnLeft;
+        TButton *btnServoLeft_TurnRight;
         void __fastcall Close1Click(TObject *Sender);
         void __fastcall COM11Click(TObject *Sender);
         void __fastcall Timer1Timer(TObject *Sender);
@@ -97,7 +101,6 @@ __published:	// IDE-managed Components
         void __fastcall COM31Click(TObject *Sender);
         void __fastcall COM41Click(TObject *Sender);
         void __fastcall COM51Click(TObject *Sender);
-        void __fastcall Button2Click(TObject *Sender);
         void __fastcall btnOFFClick(TObject *Sender);
         void __fastcall btnStepperClick(TObject *Sender);
         void __fastcall btnMotorClick(TObject *Sender);
@@ -111,12 +114,16 @@ __published:	// IDE-managed Components
         void __fastcall btnGORClick(TObject *Sender);
         void __fastcall btnStepper250Click(TObject *Sender);
         void __fastcall btnOffset_RClick(TObject *Sender);
-        void __fastcall Button1Click(TObject *Sender);
         void __fastcall btnUpClick(TObject *Sender);
         void __fastcall btnDownClick(TObject *Sender);
         void __fastcall btnRightClick(TObject *Sender);
         void __fastcall btnLeftClick(TObject *Sender);
         void __fastcall Timer2Timer(TObject *Sender);
+        void __fastcall btnMOVEClick(TObject *Sender);
+        void __fastcall btnServoRight_TurnRightClick(TObject *Sender);
+        void __fastcall btnServoRight_TurnLeftClick(TObject *Sender);
+        void __fastcall btnServoLeft_TurnLeftClick(TObject *Sender);
+        void __fastcall btnServoLeft_TurnRightClick(TObject *Sender);
 private:	// User declarations
 
   int iMotor_LastPWMValue;

@@ -237,17 +237,17 @@ void __fastcall TfrmMain::fInterpreteReceivedData (char *cChar)
       bUpdateChartStepper=true;
     }
     else
-    if (sName=="FOOT_R_X") // GY271 Sensor X value from the right footplate
+    if (sName=="FOOT_S_X") // GY271 Sensor X value from the right footplate
     {
       FootplateRight_SensorOffsetX = StrToInt(sValue);
-      FootplateRight_SensorOffsetX = FootplateRight_SensorOffsetX / 1000;
+      FootplateRight_SensorOffsetX = FootplateRight_SensorOffsetX;
       bRefreshDisplay=true;
     }
     else
-    if (sName=="FOOT_R_Y") // GY271 Sensor Y value from the right footplate
+    if (sName=="FOOT_S_Y") // GY271 Sensor Y value from the right footplate
     {
       FootplateRight_SensorOffsetY = StrToInt(sValue);
-      FootplateRight_SensorOffsetY = FootplateRight_SensorOffsetY / 1000;
+      FootplateRight_SensorOffsetY = FootplateRight_SensorOffsetY;
       bRefreshDisplay=true;
     }
   }
@@ -411,8 +411,8 @@ void __fastcall TfrmMain::DrawBaseplate(int iMotorposition, int iStepperposition
 
   dDegreeFootprintRight = iFootplateRightServoPosition - 1500; // -45° = -600, 0°=0, +45°=+600 (plus offset of 1500)
   dDegreeFootprintRight = 45.0/600.0 * dDegreeFootprintRight;
-  dDegreeFootprintLeft = iFootplateLeftServoPosition-1500;
-  dDegreeFootprintLeft = 45.0/600.0 * -dDegreeFootprintLeft;
+  dDegreeFootprintLeft  = iFootplateLeftServoPosition-1500;
+  dDegreeFootprintLeft  = 45.0/600.0 * dDegreeFootprintLeft;
 
   dMotorposition = iMotorposition;
   dDegreeBaseplate = 90.0 * (dMotorposition / 600);
@@ -492,24 +492,7 @@ void __fastcall TfrmMain::DrawBaseplate(int iMotorposition, int iStepperposition
   Image1->Canvas->Pen->Color = clRed;     // Forecolor, outer bounds color of the ellipse
   Image1->Canvas->Ellipse(dFootprintLeftCenterX-6*2, dFootprintLeftCenterY-6*2, dFootprintLeftCenterX+6*2, dFootprintLeftCenterY+6*2);
 
-  // ***************************************************************
-  // Draw right footplate
-  // ***************************************************************
-  // Hier muss zweimal gedreht werden, nicht nur einmal! XXX
-  RotatePoint2 (-30*2,  81*2, -dDegreeBaseplate, 0, 0, &points[0].x, &points[0].y);
-  RotatePoint2 ( 30*2,  81*2, -dDegreeBaseplate, 0, 0, &points[1].x, &points[1].y);
-  RotatePoint2 ( 30*2, -81*2, -dDegreeBaseplate, 0, 0, &points[2].x, &points[2].y);
-  RotatePoint2 (-30*2, -81*2, -dDegreeBaseplate, 0, 0, &points[3].x, &points[3].y);
-
-  RotatePoint2 (points[0].x, points[0].y, dDegreeFootprintRight, dFootprintRightCenterX, dFootprintRightCenterY, &points[0].x, &points[0].y);
-  RotatePoint2 (points[1].x, points[1].y, dDegreeFootprintRight, dFootprintRightCenterX, dFootprintRightCenterY, &points[1].x, &points[1].y);
-  RotatePoint2 (points[2].x, points[2].y, dDegreeFootprintRight, dFootprintRightCenterX, dFootprintRightCenterY, &points[2].x, &points[2].y);
-  RotatePoint2 (points[3].x, points[3].y, dDegreeFootprintRight, dFootprintRightCenterX, dFootprintRightCenterY, &points[3].x, &points[3].y);
-
-  Image1->Canvas->Brush->Color = clGreen; // Background color, inner fill of the ellipse
-  Image1->Canvas->Pen->Color = clBlack;     // Forecolor, outer bounds color of the ellipse
-  Image1->Canvas->Polygon(points, 3);
-
+//  Caption = IntToStr ( (int) dDegreeFootprintLeft ) + "/" + IntToStr( (int) dDegreeFootprintRight );
   // ***************************************************************
   // Draw left footplate
   // ***************************************************************
@@ -529,9 +512,29 @@ void __fastcall TfrmMain::DrawBaseplate(int iMotorposition, int iStepperposition
   Image1->Canvas->Polygon(points, 3);
 
   // ***************************************************************
+  // Draw right footplate
+  // ***************************************************************
+  // Hier muss zweimal gedreht werden, nicht nur einmal! XXX
+  RotatePoint2 (-30*2,  81*2, -dDegreeBaseplate, 0, 0, &points[0].x, &points[0].y);
+  RotatePoint2 ( 30*2,  81*2, -dDegreeBaseplate, 0, 0, &points[1].x, &points[1].y);
+  RotatePoint2 ( 30*2, -81*2, -dDegreeBaseplate, 0, 0, &points[2].x, &points[2].y);
+  RotatePoint2 (-30*2, -81*2, -dDegreeBaseplate, 0, 0, &points[3].x, &points[3].y);
+
+  RotatePoint2 (points[0].x, points[0].y, dDegreeFootprintRight, dFootprintRightCenterX, dFootprintRightCenterY, &points[0].x, &points[0].y);
+  RotatePoint2 (points[1].x, points[1].y, dDegreeFootprintRight, dFootprintRightCenterX, dFootprintRightCenterY, &points[1].x, &points[1].y);
+  RotatePoint2 (points[2].x, points[2].y, dDegreeFootprintRight, dFootprintRightCenterX, dFootprintRightCenterY, &points[2].x, &points[2].y);
+  RotatePoint2 (points[3].x, points[3].y, dDegreeFootprintRight, dFootprintRightCenterX, dFootprintRightCenterY, &points[3].x, &points[3].y);
+
+  Image1->Canvas->Brush->Color = clGreen; // Background color, inner fill of the ellipse
+  Image1->Canvas->Pen->Color = clBlack;     // Forecolor, outer bounds color of the ellipse
+  Image1->Canvas->Polygon(points, 3);
+
+
+  // ***************************************************************
   // Draw GY271 values
   // ***************************************************************
-  RotatePoint2 (dFootplateRightGY271X*2,  -dFootplateRightGY271Y*2, dDegreeFootprintRight, dFootprintRightCenterX, dFootprintRightCenterY, &lX, &lY);
+  lX = dFootplateRightGY271X*2 + dFootprintRightCenterX;
+  lY = -dFootplateRightGY271Y*2 + dFootprintRightCenterY;
   Image1->Canvas->Brush->Color = clRed; // Background color, inner fill of the ellipse
   Image1->Canvas->Pen->Color = clRed;     // Forecolor, outer bounds color of the ellipse
   Image1->Canvas->Ellipse(lX-6*2, lY-6*2, lX+6*2, lY+6*2);
@@ -541,7 +544,8 @@ void __fastcall TfrmMain::DrawBaseplate(int iMotorposition, int iStepperposition
   Image1->Canvas->MoveTo (dFootprintRightCenterX,dFootprintRightCenterY);
   Image1->Canvas->LineTo (lX,lY);
 
-  RotatePoint2 (dFootplateLeftGY271X*2,  -dFootplateLeftGY271Y*2, dDegreeFootprintLeft, dFootprintLeftCenterX, dFootprintLeftCenterY, &lX, &lY);
+  lX = dFootplateLeftGY271X*2 + dFootprintLeftCenterX;
+  lY = -dFootplateLeftGY271Y*2 + dFootprintLeftCenterY;
   Image1->Canvas->Brush->Color = clRed; // Background color, inner fill of the ellipse
   Image1->Canvas->Pen->Color = clRed;     // Forecolor, outer bounds color of the ellipse
   Image1->Canvas->Ellipse(lX-6*2, lY-6*2, lX+6*2, lY+6*2);
@@ -556,15 +560,6 @@ void __fastcall TfrmMain::DrawBaseplate(int iMotorposition, int iStepperposition
 }
 
 
-void __fastcall TfrmMain::Button2Click(TObject *Sender)
-{
-  DrawBaseplate(0,            // Motor Position
-                150,            // Stepper Position
-                1500,1500,      // Servo right and Servo left
-                20,20,            // GY271 Center Footplate right
-                20,20);           // GY271 Center Footplate left
-}
-//---------------------------------------------------------------------------
 void __fastcall TfrmMain::SendString (AnsiString sData)
 {
   if (hCom == INVALID_HANDLE_VALUE) return;
@@ -667,11 +662,6 @@ void __fastcall TfrmMain::btnOffset_RClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
-void __fastcall TfrmMain::Button1Click(TObject *Sender)
-{
-  SendString ("OFFSET_R");
-}
-//---------------------------------------------------------------------------
 
 void __fastcall TfrmMain::btnUpClick(TObject *Sender)
 {
@@ -703,6 +693,37 @@ void __fastcall TfrmMain::Timer2Timer(TObject *Sender)
   {
     SendString ("GO_R");
   }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnMOVEClick(TObject *Sender)
+{
+  SendString ("MOVE");
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnServoRight_TurnRightClick(TObject *Sender)
+{
+  SendString ("SERVO_R_R");
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnServoRight_TurnLeftClick(TObject *Sender)
+{
+  SendString ("SERVO_R_L");
+}
+//---------------------------------------------------------------------------
+
+
+void __fastcall TfrmMain::btnServoLeft_TurnLeftClick(TObject *Sender)
+{
+  SendString ("SERVO_L_L");
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TfrmMain::btnServoLeft_TurnRightClick(TObject *Sender)
+{
+  SendString ("SERVO_L_R");
 }
 //---------------------------------------------------------------------------
 
