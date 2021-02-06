@@ -1,2 +1,3 @@
-This folder contains basic documents, describing how this treadmill works and which formulars to use. Some documents are in english, other ones in german.
-Each document is available as PDF and also in other Open Office or Microsoft Office format.
+This folder contains some basic documents, describing the math for this treadmill. Some documents are in english, other ones in german.
+
+Each document is available as PDF and in other file formats, like Open Office or Microsoft Office.
