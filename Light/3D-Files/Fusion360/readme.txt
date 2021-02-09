@@ -1,0 +1,1 @@
+This folder contains a backup of the VR-Crosswalk. Will be updated around once a week.

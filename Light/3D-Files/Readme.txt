@@ -7,3 +7,6 @@ Here you will find 3D files of items that you can buy on Amazon, Ebay, and so on
 
 - "special"
 The 3D parts inside this folder are special for the "VR-Crosswalk-Light". You can't buy them, you have to create them by your own.
+
+- "Fusion360"
+This is a backup what is currently in development. This is the whole machine with all parts and screws. Will be updated around once a week.
