@@ -9,16 +9,16 @@ void CAN_setup ()
   // Init stuff for SPI/CAN Bus communication with ODRIVE
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   SPI.begin ();
-  ACAN2515Settings settings (8UL * 1000UL * 1000UL, 250UL * 1000UL); // Crystal of MCR2515 is 8MHZ, CAN Bus speed has to be 250kb/s
-  settings.mRequestedMode = ACAN2515Settings::NormalMode; // Tell the CAN bus module, that we want to communicate in real (with ODRIVE)
-  const uint16_t errorCode = can.begin (settings, NULL) ; // ISR is null, we dont use interrupt for the CAN bus.
+  ACAN2515Settings CANsettings (8UL * 1000UL * 1000UL, 250UL * 1000UL); // Crystal of MCR2515 is 8MHZ, CAN Bus speed has to be 250kb/s
+  CANsettings.mRequestedMode = ACAN2515Settings::NormalMode; // Tell the CAN bus module, that we want to communicate in real (with ODRIVE)
+  const uint16_t errorCode = can.begin (CANsettings, NULL) ; // ISR is null, we dont use interrupt for the CAN bus.
   if (errorCode != 0)
   {
-    Serial.println ("There is an issue with CAN bus");
     RS232_SendError (RS232_FRAMEID_ERROR_CANBUS, errorCode, 0); // Tell the host computer, that there is an issue with the CAN bus.
-    while (1) { }; // STOP, arduino needs to be restarted
+    while (1) { delay (1); }; // STOP, arduino needs to be restarted
   }
 }
+
 
 // -----------------------------------------------------------------
 // CAN_loop

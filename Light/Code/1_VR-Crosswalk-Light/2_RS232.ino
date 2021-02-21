@@ -24,14 +24,15 @@ void RS232_SendError (byte FrameID, unsigned int Errornumber, unsigned int Error
   RS232Message message;
   message.data16[0] = Errornumber;
   message.data16[1] = ErrorSource;
-  RS232_SendMessage (FrameID, message);
+  //RS232_SendMessage (FrameID, message);
   Serial.println ();
-  Serial.print ("Error FrameID=");
+  Serial.print ("Error FrameID=0x");
   Serial.print (FrameID,HEX);
-  Serial.print (", Errornumber=");
-  Serial.print (Errornumber);
-  Serial.print (", ErrorSource=");
+  Serial.print (", Errornumber=0x");
+  Serial.print (Errornumber,HEX);
+  Serial.print (", ErrorSource=0x");
   Serial.println (ErrorSource,HEX);
+  Serial.flush();
 }
 
 // -----------------------------------------------------------------
@@ -45,23 +46,17 @@ void RS232_setup ()
 {
   // Check if the Bluetooth module HC05 is in "AT" mode:
   Serial.begin (38400);                       // This is the default speed in AT mode
-  Serial.println ("VR-Crosswalk");
-  Serial.print ("Startup...");
-  delay (1000);                               // Wait for a second, so that HC05 has enough time to switch into AT mode (if button is pressed)
+  //delay (1000);                               // Wait for a second, so that HC05 has enough time to switch into AT mode (if button is pressed)
   Serial.println ("AT");                      // Check if HC05 is in AT mode
-  delay (1000);                               // Wait for a bit
+  //delay (1000);                               // Wait for a bit
   if (Serial.available() >= 2)                // There is an answer
   { // Bluetooth module seems to be in AT Mode
     Serial.println ("AT+UART=38400,0,0");     // Change baud rate to 38400
     delay (2000);
     Serial.println ("AT+NAME=VR-Crosswalk");  // Change its name to VR-Crosswalk
     delay (2000);
-    Serial.println ("Power off and power on again the VR-Crosswalk.");
-    Serial.println ("There is no need anymore to keep the button pressed on HC-05.");
-    Serial.println ("Thank you.");
     while (1) {}; // STOP                      // STOP arduino, need to be restarted
   }
-  Serial.println ("Startup finished.");
 }
 
 // -----------------------------------------------------------------

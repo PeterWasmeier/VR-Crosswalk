@@ -7,10 +7,18 @@
 void I2C_GY271_Write (byte Register, byte Value)
 {
   byte bStatus;
-  if (bStatus = nI2C->Write (I2C_HANDLE_GY271, Register, &Value, (uint32_t)1) != 0)
+  while (bStatus = nI2C->Write (I2C_HANDLE_GY271, Register, &cValue[Value], 1) != 0)
   { // Something went wrong
-    RS232_SendError (RS232_FRAMEID_ERROR_I2C, bStatus, I2C_GetErrorSource(I2C_HANDLE_GY271.device_address)); // Tell the host computer that there is an issue
-    while (1) { }; // STOP ardurino
+    if (bStatus==1) // I2C library is busy
+    {
+      // Wait a bit an try again
+      delay (2);
+    }
+    else
+    {
+      RS232_SendError (RS232_FRAMEID_ERROR_I2C, bStatus, I2C_GetErrorSource(I2C_HANDLE_GY271.device_address)); // Tell the host computer that there is an issue
+      while (1) { }; // STOP ardurino
+    }
   }
 }
 
@@ -44,13 +52,21 @@ void I2C_GY271_Read_Values (tGY271_Values *pGY271)
   byte bStatus;
   I2C_GY271_Value_Pointer = pGY271; // The ISR function ("I2C_GY271_OnDataReceived") needs to know where to put the received values. So copy the pointer to this global variable.
   pGY271->Valid = 0;                // Set the valid variable in this bufferplace to false, so that ardurino wont use these values for any calculation.
-  if (bStatus = nI2C->Write (I2C_HANDLE_GY271, &cValue[0], 1) != 0) // Tell this GY271 sensor we want to read beginning of register zero (there are the measured values stored)
+  while (bStatus = nI2C->Write (I2C_HANDLE_GY271, &cValue[0], 1) != 0) // Tell this GY271 sensor we want to read beginning of register zero (there are the measured values stored)
   { // There is an issue with nI2C, send error message to host and stop the arduino
-    RS232_SendError (RS232_FRAMEID_ERROR_I2C, bStatus, I2C_GetErrorSource(I2C_HANDLE_GY271.device_address)); // Inform the host computer that there is an error with I2C
-    while (1) { }; // STOP Arduino
+    if (bStatus==1) // I2C library is busy
+    {
+      // Wait a bit an try again
+      delay (2);
+    }
+    else
+    {
+      RS232_SendError (RS232_FRAMEID_ERROR_I2C, bStatus, I2C_GetErrorSource(I2C_HANDLE_GY271.device_address)); // Inform the host computer that there is an error with I2C
+      while (1) { }; // STOP Arduino
+    }
   }
   // Tell the "nI2C" library that the next data, which is received over the I2C bus, comes from this GY271 sensor:
-  if (bStatus = nI2C->Read (I2C_HANDLE_GY271, &I2C_GY271_ReceiveBuffer.data[0], 6, I2C_GY271_OnDataReceived) != 0) // Tell the library where to store the received values and which ISR to call when data is received
+  if (bStatus = nI2C->Read (I2C_HANDLE_GY271, &I2C_GY271_ReceiveBuffer[0], 7, I2C_GY271_OnDataReceived) != 0) // Tell the library where to store the received values and which ISR to call when data is received
   { // There is an issue with this library:
     RS232_SendError (RS232_FRAMEID_ERROR_I2C, bStatus, I2C_GetErrorSource(I2C_HANDLE_GY271.device_address)); // Inform the host computer that there is an error
     while (1) { }; // STOP Arduino
@@ -74,10 +90,10 @@ void I2C_GY271_OnDataReceived (const uint8_t bStatus)
   }
   // Looks like to be fine:
   // Copy the received value from the global buffer to local variables (I know this is stupid):
-  x = (int)(int16_t)(I2C_GY271_ReceiveBuffer.data[0] | I2C_GY271_ReceiveBuffer.data[1] << 8);
-  y = (int)(int16_t)(I2C_GY271_ReceiveBuffer.data[2] | I2C_GY271_ReceiveBuffer.data[3] << 8);
-  z = (int)(int16_t)(I2C_GY271_ReceiveBuffer.data[4] | I2C_GY271_ReceiveBuffer.data[5] << 8);
-  s = I2C_GY271_ReceiveBuffer.data[6];
+  x = (int)(int16_t)(I2C_GY271_ReceiveBuffer[0] | I2C_GY271_ReceiveBuffer[1] << 8);
+  y = (int)(int16_t)(I2C_GY271_ReceiveBuffer[2] | I2C_GY271_ReceiveBuffer[3] << 8);
+  z = (int)(int16_t)(I2C_GY271_ReceiveBuffer[4] | I2C_GY271_ReceiveBuffer[5] << 8);
+  s = I2C_GY271_ReceiveBuffer[6];
   // Now, copy these values from the local variables to the buffer of the current GY271 sensor:
   I2C_GY271_Value_Pointer->X = x;
   I2C_GY271_Value_Pointer->Y = y;
@@ -96,6 +112,6 @@ void I2C_GY271_OnDataReceived (const uint8_t bStatus)
       pGY271_Callback_Sensor->Valid=1;
       //fSTOP ("Value overflow at GY271","fGY271_Callback");
     }
-  */
+    */
   I2C_GY271_Value_Pointer->Valid = 1; // Tell the arduino, that we now can calculate with these values, because they are valid
 }

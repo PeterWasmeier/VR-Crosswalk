@@ -52,17 +52,35 @@ bool I2C_Footplate_Read_Sensors (TFootplate *Footplate)
       index=0;
       break;
     case 0: // Activate Channel 0 and 1 of the upper TCA9548A at once:
-      I2C_Select_TCA9548A (Footplate->I2C_HANDLE_TCA9548A_Upper, TCA9548A_CHANNEL_0 + TCA9548A_CHANNEL_1);
+      I2C_Select_TCA9548A (3,0,0,0);
       I2C_GY271_Read_Values (&Footplate->GY271[0]); 
       I2C_VL6180X_ReadValues (&Footplate->VL6180X[0]);
       index++;
       break;
     case 1: // Wait until the value of both sensors has been received:
-      if ((Footplate->GY271[0].Valid == true) && (Footplate->VL6180X[0].Valid == true)) index++;
+      if ((Footplate->GY271[0].Valid == true) && (Footplate->VL6180X[0].Valid == true))
+      {
+        index=0;
+        /*
+        Serial.print (Footplate->GY271[0].X);
+        Serial.print (", ");
+        Serial.print (Footplate->GY271[0].Y);
+        Serial.print (", ");
+        Serial.print (Footplate->GY271[0].Z);
+        Serial.print (", ");
+        */
+        Serial.print (Footplate->VL6180X[0].Distance,HEX);
+        Serial.print (", 0x");
+        Serial.print (Footplate->VL6180X[0].ErrorCode,HEX);
+        Serial.print (", ");
+        Serial.println (Footplate->VL6180X[0].SignalRate);
+        Serial.flush ();
+      }
+      //if ((Footplate->GY271[0].Valid == true) && (Footplate->VL6180X[0].Valid == true)) index++;
       break;
-      
+/*      
     case 2: // Activate Channel 2 and 3 of the upper TCA9548A at once:
-      I2C_Select_TCA9548A (Footplate->I2C_HANDLE_TCA9548A_Upper, TCA9548A_CHANNEL_2 + TCA9548A_CHANNEL_3);
+      I2C_Select_TCA9548A (&Footplate->I2C_HANDLE_TCA9548A_Upper, TCA9548A_CHANNEL_2 + TCA9548A_CHANNEL_3);
       I2C_GY271_Read_Values (&Footplate->GY271[1]); 
       I2C_VL6180X_ReadValues (&Footplate->VL6180X[1]);
       index++;
@@ -72,7 +90,7 @@ bool I2C_Footplate_Read_Sensors (TFootplate *Footplate)
       break;
 
     case 4: // Activate Channel 4 and 5 of the upper TCA9548A at once:
-      I2C_Select_TCA9548A (Footplate->I2C_HANDLE_TCA9548A_Upper, TCA9548A_CHANNEL_4 + TCA9548A_CHANNEL_5);
+      I2C_Select_TCA9548A (&Footplate->I2C_HANDLE_TCA9548A_Upper, TCA9548A_CHANNEL_4 + TCA9548A_CHANNEL_5);
       I2C_GY271_Read_Values (&Footplate->GY271[2]); 
       I2C_VL6180X_ReadValues (&Footplate->VL6180X[2]);
       index++;
@@ -83,7 +101,7 @@ bool I2C_Footplate_Read_Sensors (TFootplate *Footplate)
       
 
     case 6: // Activate Channel 0 and 1 of the lower TCA9548A at once:
-      I2C_Select_TCA9548A (Footplate->I2C_HANDLE_TCA9548A_Lower, TCA9548A_CHANNEL_0 + TCA9548A_CHANNEL_1);
+      I2C_Select_TCA9548A (&Footplate->I2C_HANDLE_TCA9548A_Lower, TCA9548A_CHANNEL_0 + TCA9548A_CHANNEL_1);
       I2C_GY271_Read_Values (&Footplate->GY271[3]); 
       I2C_VL6180X_ReadValues (&Footplate->VL6180X[3]);
       index++;
@@ -93,7 +111,7 @@ bool I2C_Footplate_Read_Sensors (TFootplate *Footplate)
       break;
       
     case 8: // Activate Channel 2 and 3 of the lower TCA9548A at once:
-      I2C_Select_TCA9548A (Footplate->I2C_HANDLE_TCA9548A_Lower, TCA9548A_CHANNEL_2 + TCA9548A_CHANNEL_3);
+      I2C_Select_TCA9548A (&Footplate->I2C_HANDLE_TCA9548A_Lower, TCA9548A_CHANNEL_2 + TCA9548A_CHANNEL_3);
       I2C_GY271_Read_Values (&Footplate->GY271[4]); 
       I2C_VL6180X_ReadValues (&Footplate->VL6180X[4]);
       index++;
@@ -103,7 +121,7 @@ bool I2C_Footplate_Read_Sensors (TFootplate *Footplate)
       break;
 
     case 10: // Activate Channel 4 and 5 of the lower TCA9548A at at once:
-      I2C_Select_TCA9548A (Footplate->I2C_HANDLE_TCA9548A_Lower, TCA9548A_CHANNEL_4 + TCA9548A_CHANNEL_5);
+      I2C_Select_TCA9548A (&Footplate->I2C_HANDLE_TCA9548A_Lower, TCA9548A_CHANNEL_4 + TCA9548A_CHANNEL_5);
       I2C_GY271_Read_Values (&Footplate->GY271[5]); 
       I2C_VL6180X_ReadValues (&Footplate->VL6180X[5]);
       index++;
@@ -115,6 +133,7 @@ bool I2C_Footplate_Read_Sensors (TFootplate *Footplate)
         return true; // Finished
       }
       break;
+*/
   }
   return false; // Not yet finished
 }
@@ -125,11 +144,50 @@ bool I2C_Footplate_Read_Sensors (TFootplate *Footplate)
 // This function is calculating the I2C source, where an I2C
 // error happened.
 // The result are two byte values in one unsigned int.
-// The upper 8 bit of the result contains the channel of the TCA9548A,
-// the lower 8 bit contains the I2C bus adress of the TCA9548A.
-// If the upper 8 bits are zero, the error happend at the TCA9548A
+// The lower 8 bit of the result contains the channel of the TCA9548A,
+// the higher 8 bit contains the I2C bus adress of the TCA9548A.
+// If the lower 8 bits are zero, the error happend at the TCA9548A
 // itself.
-// [8 Bits: CHANNEL AS A BITMASK][I2C Address of a TCA9548A]
+// [I2C Address of a TCA9548A] [CHANNEL as a bitmask]
+// Now it depends, what is connected to this channel:
+// Channel  Device
+// ---------------
+// 0:   GY-271/HMC5883L
+// 1:   VL6180X
+// 2:   VL6180X
+// 3:   GY-271/HMC5883L
+// 4:   GY-271/HMC5883L
+// 5:   VL6180X
+
+// Return value:
+// 0x7000, left footplate, upper TCA9548A
+// 0x7001, left footplate, upper TCA9548A, channel 0 (GY-271)
+// 0x7002, left footplate, upper TCA9548A, channel 1 (VL6180X)
+// 0x7004, left footplate, upper TCA9548A, channel 2 (VL6180X)
+// 0x7008, left footplate, upper TCA9548A, channel 3 (GY-271)
+// 0x7010, left footplate, upper TCA9548A, channel 4 (GY-271)
+// 0x7020, left footplate, upper TCA9548A, channel 5 (VL6180X)
+// 0x7100, left footplate, lower TCA9548A
+// 0x7101, left footplate, lower TCA9548A, channel 0 (GY-271)
+// 0x7102, left footplate, lower TCA9548A, channel 1 (VL6180X)
+// 0x7104, left footplate, lower TCA9548A, channel 2 (VL6180X)
+// 0x7108, left footplate, lower TCA9548A, channel 3 (GY-271)
+// 0x7110, left footplate, lower TCA9548A, channel 4 (GY-271)
+// 0x7120, left footplate, lower TCA9548A, channel 5 (VL6180X)
+// 0x7400, right footplate, upper TCA9548A
+// 0x7401, right footplate, upper TCA9548A, channel 0 (GY-271)
+// 0x7402, right footplate, upper TCA9548A, channel 1 (VL6180X)
+// 0x7404, right footplate, upper TCA9548A, channel 2 (VL6180X)
+// 0x7408, right footplate, upper TCA9548A, channel 3 (GY-271)
+// 0x7410, right footplate, upper TCA9548A, channel 4 (GY-271)
+// 0x7420, right footplate, upper TCA9548A, channel 5 (VL6180X)
+// 0x7500, right footplate, lower TCA9548A
+// 0x7501, right footplate, lower TCA9548A, channel 0 (GY-271)
+// 0x7502, right footplate, lower TCA9548A, channel 1 (VL6180X)
+// 0x7504, right footplate, lower TCA9548A, channel 2 (VL6180X)
+// 0x7505, right footplate, lower TCA9548A, channel 3 (GY-271)
+// 0x7510, right footplate, lower TCA9548A, channel 4 (GY-271)
+// 0x7520, right footplate, lower TCA9548A, channel 5 (VL6180X)
 // -----------------------------------------------------------------
 unsigned int I2C_GetErrorSource (byte device_address)
 {
@@ -164,9 +222,11 @@ unsigned int I2C_GetErrorSource (byte device_address)
     RS232_SendError (RS232_FRAMEID_ERROR_CODE, 1, 3); // The parameter device_address in function I2C_GetErrorSource is invalid.
     while (1) { }; // STOP arduino
   }
-  result = channel;
+  device_address = I2C_HANDLE_Current_TCA9548A->device_address;
+  result = device_address;
   result = result << 8;
-  result = result + device_address;
+  result = result + channel;
+  return result;
 }
 
 // -----------------------------------------------------------------
@@ -182,7 +242,10 @@ unsigned int I2C_GetErrorSource (byte device_address)
 // -----------------------------------------------------------------
 void I2C_setup ()
 {
-  nI2C->SetTimeoutMS(5); // use 5ms as a timeout for any I2C communication
+  byte bStatus;
+  I2C_HANDLE_Current_TCA9548A=&Footplate_Left.I2C_HANDLE_TCA9548A_Upper;
+  I2C_CHANNEL_Current_TCA9548A=0;
+  nI2C->SetTimeoutMS(500); // use 5ms as a timeout for any I2C communication
   // For each I2C device on the bus, we have to create a handle.
   // The handles will be used to read and write later on over the I2C bus.
   // There are four TCA9548A I2C multiplexer in total, two on each footplate:
@@ -201,26 +264,28 @@ void I2C_setup ()
   // 3:      8     GY-271/HMC5883L
   // 4:      16    GY-271/HMC5883L
   // 5:      32    VL6180X
-
   // Left footplate, upper TCA9548A I2C multiplexer
-  I2C_Select_TCA9548A (Footplate_Left.I2C_HANDLE_TCA9548A_Upper, TCA9548A_CHANNEL_0 + TCA9548A_CHANNEL_1); // Enable Channel 0 and 1
+  // First, disable all TCA9548A channels:
+  I2C_Select_TCA9548A (0,0,0,0);
+  I2C_Select_TCA9548A (3,0,0,0); 
   I2C_GY271_Init (); // Initialize this GY-271/HMC5883L sensor
   I2C_VL6180X_Init (); // Initialize this VL6180X sensor 
-  I2C_Select_TCA9548A (Footplate_Left.I2C_HANDLE_TCA9548A_Upper, TCA9548A_CHANNEL_2 + TCA9548A_CHANNEL_3); // Enable Channel 2 and 3
+  /*
+  I2C_Select_TCA9548A (&Footplate_Left.I2C_HANDLE_TCA9548A_Upper, TCA9548A_CHANNEL_2 + TCA9548A_CHANNEL_3); // Enable Channel 2 and 3
   I2C_GY271_Init (); // Initialize this GY-271/HMC5883L sensor
   I2C_VL6180X_Init (); // Initialize this VL6180X sensor 
-  I2C_Select_TCA9548A (Footplate_Left.I2C_HANDLE_TCA9548A_Upper, TCA9548A_CHANNEL_4 + TCA9548A_CHANNEL_5); // Enable Channel 4 and 5
+  I2C_Select_TCA9548A (&Footplate_Left.I2C_HANDLE_TCA9548A_Upper, TCA9548A_CHANNEL_4 + TCA9548A_CHANNEL_5); // Enable Channel 4 and 5
   I2C_GY271_Init (); // Initialize this GY-271/HMC5883L sensor
   I2C_VL6180X_Init (); // Initialize this VL6180X sensor 
 
   // Left footplate, lower TCA9548A I2C multiplexer
-  I2C_Select_TCA9548A (Footplate_Left.I2C_HANDLE_TCA9548A_Lower, TCA9548A_CHANNEL_0 + TCA9548A_CHANNEL_1); // Enable Channel 0 and 1
+  I2C_Select_TCA9548A (&Footplate_Left.I2C_HANDLE_TCA9548A_Lower, TCA9548A_CHANNEL_0 + TCA9548A_CHANNEL_1); // Enable Channel 0 and 1
   I2C_GY271_Init (); // Initialize this GY-271/HMC5883L sensor
   I2C_VL6180X_Init (); // Initialize this VL6180X sensor 
-  I2C_Select_TCA9548A (Footplate_Left.I2C_HANDLE_TCA9548A_Lower, TCA9548A_CHANNEL_2 + TCA9548A_CHANNEL_3); // Enable Channel 2 and 3
+  I2C_Select_TCA9548A (&Footplate_Left.I2C_HANDLE_TCA9548A_Lower, TCA9548A_CHANNEL_2 + TCA9548A_CHANNEL_3); // Enable Channel 2 and 3
   I2C_GY271_Init (); // Initialize this GY-271/HMC5883L sensor
   I2C_VL6180X_Init (); // Initialize this VL6180X sensor 
-  I2C_Select_TCA9548A (Footplate_Left.I2C_HANDLE_TCA9548A_Lower, TCA9548A_CHANNEL_4 + TCA9548A_CHANNEL_5); // Enable Channel 4 and 5
+  I2C_Select_TCA9548A (&Footplate_Left.I2C_HANDLE_TCA9548A_Lower, TCA9548A_CHANNEL_4 + TCA9548A_CHANNEL_5); // Enable Channel 4 and 5
   I2C_GY271_Init (); // Initialize this GY-271/HMC5883L sensor
   I2C_VL6180X_Init (); // Initialize this VL6180X sensor 
 
@@ -245,4 +310,5 @@ void I2C_setup ()
   I2C_Select_TCA9548A (Footplate_Right.I2C_HANDLE_TCA9548A_Lower, TCA9548A_CHANNEL_4 + TCA9548A_CHANNEL_5); // Enable Channel 4 and 5
   I2C_GY271_Init (); // Initialize this GY-271/HMC5883L sensor
   I2C_VL6180X_Init (); // Initialize this VL6180X sensor 
+  */
 }
