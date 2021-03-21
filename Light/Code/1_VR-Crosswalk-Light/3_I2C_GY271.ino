@@ -7,7 +7,9 @@
 void I2C_GY271_Write (byte Register, byte Value)
 {
   byte bStatus;
-  while (bStatus = nI2C->Write (I2C_HANDLE_GY271, Register, &cValue[Value], 1) != 0)
+  byte *pointer;
+  pointer = I2C_GetBufferpointer (Value);
+  while (bStatus = nI2C->Write (I2C_HANDLE_GY271, Register, pointer, 1) != 0)
   { // Something went wrong
     if (bStatus==1) // I2C library is busy
     {
@@ -50,14 +52,15 @@ void I2C_GY271_Init ()
 void I2C_GY271_Read_Values (tGY271_Values *pGY271)
 {
   byte bStatus;
+  byte *pointer;
   I2C_GY271_Value_Pointer = pGY271; // The ISR function ("I2C_GY271_OnDataReceived") needs to know where to put the received values. So copy the pointer to this global variable.
   pGY271->Valid = 0;                // Set the valid variable in this bufferplace to false, so that ardurino wont use these values for any calculation.
-  while (bStatus = nI2C->Write (I2C_HANDLE_GY271, &cValue[0], 1) != 0) // Tell this GY271 sensor we want to read beginning of register zero (there are the measured values stored)
+  pointer = I2C_GetBufferpointer (0);
+  while (bStatus = nI2C->Write (I2C_HANDLE_GY271, pointer, 1) != 0) // Tell this GY271 sensor we want to read beginning of register zero (there are the measured values stored)
   { // There is an issue with nI2C, send error message to host and stop the arduino
     if (bStatus==1) // I2C library is busy
     {
       // Wait a bit an try again
-      delay (2);
     }
     else
     {

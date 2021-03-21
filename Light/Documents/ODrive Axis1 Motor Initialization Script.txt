@@ -1,0 +1,85 @@
+odrv0.axis1.motor.config.pole_pairs=7
+odrv0.axis1.controller.config.input_mode=INPUT_MODE_TRAP_TRAJ
+odrv0.axis1.motor.config.motor_type = MOTOR_TYPE_HIGH_CURRENT
+odrv0.axis1.motor.config.current_lim=25
+odrv0.axis1.controller.config.vel_limit=20
+odrv0.axis1.motor.config.calibration_current=2
+odrv0.axis1.motor.config.torque_constant=0.0147678571428571
+odrv0.axis1.motor.config.pre_calibrated = False
+odrv0.axis1.encoder.config.use_index=False
+odrv0.axis1.encoder.config.pre_calibrated=False
+odrv0.save_configuration()
+odrv0.reboot ()
+
+odrv0.axis1.encoder.config.bandwidth = 3000
+odrv0.axis1.encoder.config.mode = ENCODER_MODE_INCREMENTAL
+odrv0.axis1.encoder.config.cpr=8192
+odrv0.save_configuration()
+odrv0.reboot ()
+
+odrv0.axis1.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+dump_errors(odrv0)
+
+odrv0.axis1.motor.config.pre_calibrated=True
+odrv0.axis1.trap_traj.config.vel_limit = 0.5
+odrv0.axis1.trap_traj.config.accel_limit = 140
+odrv0.axis1.trap_traj.config.decel_limit = 140
+odrv0.axis1.controller.config.inertia = 0
+odrv0.axis1.controller.config.input_mode=INPUT_MODE_TRAP_TRAJ
+odrv0.save_configuration()
+odrv0.reboot ()
+
+odrv0.axis1.encoder.config.use_index=True
+odrv0.axis1.requested_state = AXIS_STATE_ENCODER_INDEX_SEARCH
+odrv0.axis1.encoder.config.pre_calibrated=True
+odrv0.save_configuration()
+odrv0.axis1.encoder.is_ready
+odrv0.reboot ()
+
+odrv0.axis1.controller.config.pos_gain=56
+odrv0.axis1.controller.config.vel_gain=0.053
+odrv0.axis1.controller.config.vel_integrator_gain=0.05
+odrv0.axis1.min_endstop.config.gpio_num=8
+odrv0.axis1.min_endstop.config.debounce_ms=1
+odrv0.axis1.min_endstop.config.is_active_high=True
+odrv0.axis1.min_endstop.config.enabled=True
+odrv0.save_configuration()
+odrv0.reboot ()
+
+odrv0.axis1.min_endstop.endstop_state
+dump_errors(odrv0,True)
+
+odrv0.axis1.requested_state = AXIS_STATE_ENCODER_INDEX_SEARCH
+odrv0.axis1.encoder.is_ready
+dump_errors(odrv0,True)
+
+odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+odrv0.axis1.controller.input_pos=
+odrv0.axis1.requested_state = AXIS_STATE_IDLE
+
+
+odrv0.axis1.controller.config.vel_ramp_rate=0.5
+odrv0.axis1.min_endstop.config.offset=2
+odrv0.axis1.controller.config.homing_speed=-0.5
+odrv0.axis1.requested_state=AXIS_STATE_HOMING
+
+AXIS_ERROR_HOMING_WITOUT_ENDSTOP
+**********************************************************
+Tuning
+
+odrv0.axis1.controller.config.pos_gain=20
+odrv0.axis1.controller.config.vel_gain=0.04
+odrv0.axis1.controller.config.vel_integrator_gain=0
+
+odrv0.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+odrv0.axis1.controller.input_pos=
+odrv0.axis1.requested_state = AXIS_STATE_IDLE
+dump_errors(odrv0,True)
+
+odrv0.axis1.requested_state = AXIS_STATE_ENCODER_INDEX_SEARCH
+odrv0.axis1.encoder.is_ready
+dump_errors(odrv0,True)
+
+start_liveplotter(lambda:[odrv0.axis1.encoder.pos_estimate, odrv0.axis1.controller.pos_setpoint])
+
+start_liveplotter(lambda:[odrv0.axis1.motor.current_control.Iq_setpoint,odrv0.axis1.motor.current_control.Iq_measured])

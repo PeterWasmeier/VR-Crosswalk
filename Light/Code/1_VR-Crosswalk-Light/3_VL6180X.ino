@@ -16,7 +16,8 @@
 void I2C_VL6180X_Write (unsigned int uiRegister, byte Value)
 {
   byte bStatus;
-  while (bStatus=nI2C->Write (I2C_HANDLE_VL6180X, uiRegister, &cValue[Value],1)!=0)
+  byte *pointer=I2C_GetBufferpointer (Value);
+  while (bStatus=nI2C->Write (I2C_HANDLE_VL6180X, uiRegister, pointer,1)!=0)
   { // Something went wrong
     if (bStatus==1) // I2C library is busy
     {
@@ -32,24 +33,6 @@ void I2C_VL6180X_Write (unsigned int uiRegister, byte Value)
 
 void I2C_VL6180X_Init () 
 { 
-  byte bStatus;
-  I2C_VL6180X_ReceiveBuffer[0]=0;
-  while (bStatus = nI2C->Read (I2C_HANDLE_VL6180X, 0x000, &I2C_VL6180X_ReceiveBuffer[0], 1) != 0)
-  { // There is an issue with this library:
-    if (bStatus==1)
-    {
-      // Busy, retry
-    }
-    else
-    {
-      Serial.println ("Error");
-      RS232_SendError (RS232_FRAMEID_ERROR_I2C, bStatus, I2C_GetErrorSource(I2C_HANDLE_VL6180X.device_address));
-      while (1) { }; // STOP Arduino
-    }
-  }
-  Serial.print ("Modell ID=");
-  Serial.println (I2C_VL6180X_ReceiveBuffer[0],HEX);
-  Serial.flush();
   I2C_VL6180X_Write(0x0207, 0x01);
   I2C_VL6180X_Write(0x0208, 0x01);
   I2C_VL6180X_Write(0x0096, 0x00);
@@ -94,17 +77,25 @@ void I2C_VL6180X_Init ()
   I2C_VL6180X_Write(0x003e, 0x31);       // Set default ALS inter-measurement period to 500ms
   I2C_VL6180X_Write(0x0014, 0x24);       // Configures interrupt on 'New Sample Ready threshold event'
 
+  // Special settings:
+  //  6=25ms
+  //  7=55ms aber auch 7=14ms
+  // 10=52ms 
+  // 20=59ms
+  I2C_VL6180X_Write(0x001C, 6);       // Maximum time to run measurement in Ranging modes (1unit=1ms)
+  
   I2C_VL6180X_Write(0x0016, 0x00);       // VL6180X_REG_SYSTEM_FRESH_OUT_OF_RESET
 }
 
 
-void I2C_VL6180X_ReadValues (tVL6180X_Values *pVL6180X)
+void I2C_VL6180X_StartMeasurement (tVL6180X_Values *pVL6180X)
 {
+  //return;  
   byte bStatus;
-  I2C_VL6180X_Value_Pointer = pVL6180X; 
-  pVL6180X->Valid = 0;
+  byte *pointer;
+  pointer = I2C_GetBufferpointer (1);
   // start single range measurement:
-  while (bStatus = nI2C->Write (I2C_HANDLE_VL6180X, 0x018, &cValue[0x01], 1) != 0) 
+  while (bStatus = nI2C->Write (I2C_HANDLE_VL6180X, 0x018, pointer, 1) != 0) 
   { // There is an issue with nI2C, send error message to host and stop the arduino
     if (bStatus==1) // I2C library is busy
     {
@@ -116,6 +107,13 @@ void I2C_VL6180X_ReadValues (tVL6180X_Values *pVL6180X)
       while (1) { }; // STOP Arduino
     }
   }
+}
+
+void I2C_VL6180X_ReadValues (tVL6180X_Values *pVL6180X)
+{
+  byte bStatus;
+  I2C_VL6180X_Value_Pointer = pVL6180X; 
+  pVL6180X->Valid = 0;
   // poll the VL6180X till new sample ready
   if (bStatus = nI2C->Read (I2C_HANDLE_VL6180X, 0x04f, &I2C_VL6180X_ReceiveBuffer[0], 1, I2C_VL6180X_OnPollForNewSampleReady) != 0)
   { // There is an issue with this library:
@@ -160,6 +158,7 @@ void I2C_VL6180X_OnDistance (const uint8_t bStatus)
 {
   byte distance;
   byte bStatus2;
+  byte *pointer;
   if (bStatus != 0) // is there an issue with the received data from the current VL6180X sensor?
   { // something went wrong
     RS232_SendError (RS232_FRAMEID_ERROR_I2C, bStatus, I2C_GetErrorSource(I2C_HANDLE_VL6180X.device_address)); // Tell the host computer, there is something wrong
@@ -167,22 +166,8 @@ void I2C_VL6180X_OnDistance (const uint8_t bStatus)
   }
   distance=I2C_VL6180X_ReceiveBuffer[0];
   I2C_VL6180X_Value_Pointer->Distance = distance;
-  // Now, clear interrupts
-  // Write value 0x07 to register 0x015
-  while (bStatus2=nI2C->Write (I2C_HANDLE_VL6180X, 0x015, &cValue[0x07],1)!=0)
-  { // Something went wrong
-    if (bStatus2==1) // I2C library is busy
-    {
-      // Wait a bit and try again
-    }
-    else
-    {
-      RS232_SendError (RS232_FRAMEID_ERROR_I2C, bStatus2, I2C_GetErrorSource(I2C_HANDLE_VL6180X.device_address)); // Tell the host computer that there is an issue
-      while (1) { }; // STOP ardurino
-    }
-  }
   // Read status information (error code out of this sensor):
-  if (bStatus2 = nI2C->Read (I2C_HANDLE_VL6180X, 0x04d, &I2C_VL6180X_ReceiveBuffer[0], 2, I2C_VL6180X_OnErrorCode) != 0)
+  if (bStatus2 = nI2C->Read (I2C_HANDLE_VL6180X, 0x04d, &I2C_VL6180X_ReceiveBuffer[0], 1, I2C_VL6180X_OnErrorCode) != 0)
   { // There is an issue with this library:
     RS232_SendError (RS232_FRAMEID_ERROR_I2C, bStatus2, I2C_GetErrorSource(I2C_HANDLE_VL6180X.device_address));
     while (1) { }; // STOP Arduino
@@ -191,15 +176,15 @@ void I2C_VL6180X_OnDistance (const uint8_t bStatus)
 
 void I2C_VL6180X_OnErrorCode (const uint8_t bStatus)
 {
-  unsigned int errorcode;
+  byte errorcode;
   byte bStatus2;
   if (bStatus != 0) // is there an issue with the received data from the current VL6180X sensor?
   { // something went wrong
     RS232_SendError (RS232_FRAMEID_ERROR_I2C, bStatus, I2C_GetErrorSource(I2C_HANDLE_VL6180X.device_address)); // Tell the host computer, there is something wrong
     while (1) { }; // Stop the arduino
   }
-  // Read register 0x04f (do a and-operation with value 0x07) until its result is 0x04
-  errorcode = (unsigned int)(int16_t)(I2C_VL6180X_ReceiveBuffer[0] | I2C_VL6180X_ReceiveBuffer[1] << 8);
+  // Read register 0x04d
+  errorcode = I2C_VL6180X_ReceiveBuffer[0];
   I2C_VL6180X_Value_Pointer->ErrorCode = errorcode;
   // Read signal rate:
   if (bStatus2 = nI2C->Read (I2C_HANDLE_VL6180X, 0x066, &I2C_VL6180X_ReceiveBuffer[0], 2, I2C_VL6180X_OnSignalRate) != 0)
@@ -211,16 +196,36 @@ void I2C_VL6180X_OnErrorCode (const uint8_t bStatus)
 
 void I2C_VL6180X_OnSignalRate (const uint8_t bStatus)
 {
-  unsigned int signalrate;
+  unsigned long signalrate;
   byte bStatus2;
+  byte *pointer;
   if (bStatus != 0) // is there an issue with the received data from the current VL6180X sensor?
   { // something went wrong
     RS232_SendError (RS232_FRAMEID_ERROR_I2C, bStatus, I2C_GetErrorSource(I2C_HANDLE_VL6180X.device_address)); // Tell the host computer, there is something wrong
     while (1) { }; // Stop the arduino
   }
-  // Read register 0x066
-  signalrate = (unsigned int)(int16_t)(I2C_VL6180X_ReceiveBuffer[0] | I2C_VL6180X_ReceiveBuffer[1] << 8);
-  signalrate = signalrate >> 7;
+
+  // Now, clear interrupts
+  // Write value 0x07 to register 0x015
+  pointer = I2C_GetBufferpointer (7);
+  while (bStatus2=nI2C->Write (I2C_HANDLE_VL6180X, 0x015, pointer,1)!=0)
+  { // Something went wrong
+    if (bStatus2==1) // I2C library is busy
+    {
+      // Wait a bit and try again
+    }
+    else
+    {
+      RS232_SendError (RS232_FRAMEID_ERROR_I2C, bStatus2, I2C_GetErrorSource(I2C_HANDLE_VL6180X.device_address)); // Tell the host computer that there is an issue
+      while (1) { }; // STOP ardurino
+    }
+  }
+  // interprete register 0x066
+  signalrate = I2C_VL6180X_ReceiveBuffer[1];
+  signalrate = signalrate << 8;
+  signalrate = signalrate + I2C_VL6180X_ReceiveBuffer[0];
+  signalrate = signalrate >> 1;
+  // Rate has changed from high to low:
   I2C_VL6180X_Value_Pointer->SignalRate = signalrate;
   I2C_VL6180X_Value_Pointer->Valid = true;
 }

@@ -11,11 +11,13 @@ void CAN_setup ()
   SPI.begin ();
   ACAN2515Settings CANsettings (8UL * 1000UL * 1000UL, 250UL * 1000UL); // Crystal of MCR2515 is 8MHZ, CAN Bus speed has to be 250kb/s
   CANsettings.mRequestedMode = ACAN2515Settings::NormalMode; // Tell the CAN bus module, that we want to communicate in real (with ODRIVE)
+  CANsettings.mReceiveBufferSize = 1;
+  CANsettings.mTransmitBuffer0Size = 1;
   const uint16_t errorCode = can.begin (CANsettings, NULL) ; // ISR is null, we dont use interrupt for the CAN bus.
   if (errorCode != 0)
   {
     RS232_SendError (RS232_FRAMEID_ERROR_CANBUS, errorCode, 0); // Tell the host computer, that there is an issue with the CAN bus.
-    while (1) { delay (1); }; // STOP, arduino needs to be restarted
+    while (1) { }; // STOP, arduino needs to be restarted
   }
 }
 
@@ -30,9 +32,20 @@ void CAN_setup ()
 void CAN_loop ()
 {
   static byte index=0;
+  float tempfloat;
   CANMessage message;
   // Check if data is received from ODRIVE over the CAN-bus:
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  if (can.receiveErrorCounter()>0)
+  {
+    RS232_SendError (RS232_FRAMEID_ERROR_CANBUS,0,1); // ERROR: Receive error 
+    while (1) { };
+  }
+  if (can.transmitErrorCounter()>0)
+  {
+    RS232_SendError (RS232_FRAMEID_ERROR_CANBUS,0,1); // ERROR: Send error
+    while (1) { };
+  }
   can.poll () ;         // Because we do not use interrupt for the can-bus, we have to poll the can bus.
   if (can.available ())
   { // Something was received from the CAN-bus:
@@ -86,11 +99,48 @@ void CAN_loop ()
         message.id = ODRIVE_NODE_ID_AXIS0 + CAN_FRAMEID_Get_VBus_Voltage;
         message.rtr = true;
         message.len = 0;
-        if (can.tryToSend (message)) index = 0; // repeat stuff to ask for, in the next cycle
+        if (can.tryToSend (message)) index++; 
+        break;
+      case 3: // Is there a need to rotate the device?
+        if (ODrive.Axis0.ExecuteMovement==true)
+        {
+          tempfloat = ODrive.Axis0.Targetposition; // XXX
+          message.id = ODRIVE_NODE_ID_AXIS0 + CAN_FRAMEID_Set_Input_Pos;
+          message.rtr = false;
+          message.len = 0x04;
+          message.dataFloat[0]=tempfloat; // the desired position, in [turns]
+          if (can.tryToSend (message)) 
+          {
+            ODrive.Axis0.ExecuteMovement=false;
+            index++; 
+          }
+        }
+        else
+        {
+          index++;
+        }
+        break;
+      case 4: // Is there a need to move?
+        if (ODrive.Axis1.ExecuteMovement==true)
+        {
+          tempfloat = ODrive.Axis1.Targetposition; // XXX
+          message.id = ODRIVE_NODE_ID_AXIS1 + CAN_FRAMEID_Set_Input_Pos;
+          message.rtr = false;
+          message.len = 0x04;
+          message.dataFloat[0]=tempfloat; // the desired position, in [turns]
+          if (can.tryToSend (message)) 
+          {
+            ODrive.Axis1.ExecuteMovement=false;
+            index++; 
+          }
+        }
+        else
+        {
+          index++;
+        }
         break;
       default: // Ups, something went wrong, but we don't care. We just repeat the loop from the beginning (no need to raise an emergency stop)
         index = 0;
-        Serial.println ("CAN Bus cycle finished.");
         break;
     }
   }

@@ -18,7 +18,7 @@
 #include <ACANBuffer16.h>
 #include <CANMessage.h>
 #include <MCP2515ReceiveFilters.h>
-
+ 
 // Header files for "nI2C":
 #include <avrlibdefs.h>
 #include <nI2C.h>
@@ -96,7 +96,10 @@
 // on the FRAMEID. But anyway: each datapackage is 6 bytes long.
 // Doesn't matter is a parameter is being used or not.
 // Here are the FRAMEIDs:
-const byte RS232_FRAMEID_ERROR_CANBUS = 1; // Message to host computer: Error with CAN-bus.
+const byte RS232_FRAMEID_ROTATE = 0x00; // Message from host computer: rotate the device by given units. Parameter is 32 bits, signed long.
+const byte RS232_FRAMEID_MOVE   = 0x01;
+const byte RS232_FRAMEID_ERROR_CANBUS = 0x02; // Message to host computer: Error with CAN-bus.
+/*
 // The error code contains a set of bits. Each bit represents a single error:
 // 1.Parameter (Errornumber as a bitmask):
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -121,8 +124,9 @@ const byte RS232_FRAMEID_ERROR_CANBUS = 1; // Message to host computer: Error wi
 // 2.Parameter (ErrorSource):
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 // always zero
-
-const byte RS232_FRAMEID_ERROR_RS232  = 2; // Message to host computer: Error with RS232 interface. There are no parameters.
+*/
+const byte RS232_FRAMEID_ERROR_RS232  = 0x03; // Message to host computer: Error with RS232 interface. There are no parameters.
+/*
 // 1.Parameter (Errornumber):
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 1: could not get all the received data from internal RS232 buffer
@@ -130,8 +134,9 @@ const byte RS232_FRAMEID_ERROR_RS232  = 2; // Message to host computer: Error wi
 // 2.Parameter (ErrorSource):
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 // always zero
-
-const byte RS232_FRAMEID_ERROR_I2C    = 3; // Message to host computer: Error with I2C interface. The first parameter contains an error number (see below).
+*/
+const byte RS232_FRAMEID_ERROR_I2C    = 0x04; // Message to host computer: Error with I2C interface. The first parameter contains an error number (see below).
+/*
 // 1.Parameter (Errornumber)
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 // 0:success
@@ -159,23 +164,29 @@ const byte RS232_FRAMEID_ERROR_I2C    = 3; // Message to host computer: Error wi
 // 4:      GY-271/HMC5883L
 // 5:      VL6180X
 // This second parameter is devided into upper and lower 8 bits:
-
-const byte RS232_FRAMEID_ERROR_CODE = 4; // Message to host computer, that there is something wrong in the source code of this program.
+*/
+const byte RS232_FRAMEID_ERROR_CODE = 0x05; // Message to host computer, that there is something wrong in the source code of this program.
+/*
 // 1.Parameter (Errornumber):
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 //  1: Invalid parameter for function I2C_Select_TCA9548A, ChannelToActivate is too high. Stopping the arduino
 //  2: The parameter Footplate for the function I2C_Select_GY271 is invalid. Arduino stopped.
 //  3: The parameter device_address in function I2C_GetErrorSource is invalid.
-const byte RS232_FRAMEID_GETENCODER_AXIS0 = 1; // Message to arduino: Host Computer wants to know the position of the horizontal and rotation axis.
+*/
+const byte RS232_FRAMEID_ENCODER_AXIS0 = 0x06; // Message to arduino: Host Computer wants to know the position of the horizontal and rotation axis.
+const byte RS232_FRAMEID_ENCODER_AXIS1 = 0x07;
+const byte RS232_FRAMEID_VBUS_VOLTAGE = 0x08;
+const byte RS232_FRAMEID_DEBUG_16BIT = 0x09;
+const byte RS232_FRAMEID_DEBUG_32BIT = 0x0A;
 
 // This is the datapackage, which is being used between host computer and the arduino:
 typedef struct
 {
   byte id;                     // will contain later on one of the "RS232_FRAMEID..."
   union {                      // Here are the parameters, which can be used/filled:
-    uint32_t data32;     // one parameter as unsigned long (32 bit), or
-    uint16_t data16[2] ; // up to two parameters as unsigned int (16 bit), or
-    float dataFloat[1] ; // one parameter as float
+    int32_t data32;     // one parameter as unsigned long (32 bit), or
+    int16_t data16[2] ; // up to two parameters as unsigned int (16 bit), or
+    float dataFloat;     // one parameter as float
     uint8_t data [4] = {0, 0, 0, 0}; // or four parameters as four bytes
   };
   byte CRC;                    // The CRC is just a XOR of all bytes, including "FRAMEID"
@@ -200,6 +211,7 @@ const unsigned int ODRIVE_NODE_ID_AXIS1 = (1) << 5; // Upper 6 bit of the can-bu
 const unsigned int CAN_FRAMEID_Heartbeat_Message = 0x001;
 const unsigned int CAN_FRAMEID_Get_Encoder_Count = 0x00A;
 const unsigned int CAN_FRAMEID_Get_VBus_Voltage = 0x017;
+const unsigned int CAN_FRAMEID_Set_Input_Pos = 0x00C;
 
 // The following structure will contain later one the values from each
 // axis of the ODrive. This arduino program will collect all values for
@@ -210,6 +222,8 @@ typedef struct
   unsigned long AxisCurrentState;
   signed long EncoderShadowCount;
   signed long EncoderCountinCPR;
+  signed long Targetposition;
+  bool ExecuteMovement;
 } TODriveAxis;
 
 // General values from the ODRIVE will be stored in this structur:
@@ -239,7 +253,8 @@ typedef struct {                    // tGY271_XYZ, contains the measured values 
 typedef struct {                    // tGY271_XYZ, contains the measured values for each axis
   bool Valid;                       // Value in "Distance" and "SignalStrength" are valid.
   byte Distance;            // Current Distance value in mm
-  unsigned int ErrorCode;
+  byte ErrorCode;
+  byte ALS_STATUS;
   unsigned int SignalRate;       // Current SignalStrength
 } tVL6180X_Values;
 
@@ -257,34 +272,25 @@ typedef struct {
 TFootplate Footplate_Left;      // This global variable will store all sensor values from the left footplate
 TFootplate Footplate_Right;     // This global variable will store all sensor values from the right footplate
 
-CI2C::Handle *I2C_HANDLE_Current_TCA9548A;  // This variable contains the handle of the current active TCA9548A I2C multiplexer. There can be only one of them being active at the same time.
 byte I2C_CHANNEL_Current_TCA9548A; // The channels which are currently activated/open on the current TCA9548A
-
+byte I2C_HANDLE_Current_TCA9548A_device_address;
 // Because we use the library "nI2C", each I2C device (like GY271 or VL6180X) gets its own handle, which is later on needed to communicate with
 CI2C::Handle I2C_HANDLE_GY271;   // Each footplate has got six GY271 magnet field sensors. But we have to create only instance, because they are all separated by I2C multiplexer
 CI2C::Handle I2C_HANDLE_VL6180X; // Each footplate has got six VL6180X sensor sensors. But we have to create only instance, because they are all separated by I2C multiplexer
 
 // Because the data is transfered in the background (using interrupts), we have to offer a global buffer for the ISR, where the ISR can store the received values:
-byte I2C_GY271_ReceiveBuffer[10]; // All bytes, received over I2C from the GY271 sensors, will be placed into this buffer by the function "I2C_GY271_OnDataReceived"
-byte I2C_VL6180X_ReceiveBuffer[10]; // XXX All bytes, received over I2C from the VL6180X sensors, will be placed into this buffer by the function "I2C_GY271_OnDataReceived"
+byte I2C_GY271_ReceiveBuffer[8]; // All bytes, received over I2C from the GY271 sensors, will be placed into this buffer by the function "I2C_GY271_OnDataReceived"
+byte I2C_VL6180X_ReceiveBuffer[5]; // XXX All bytes, received over I2C from the VL6180X sensors, will be placed into this buffer by the function "I2C_GY271_OnDataReceived"
 tGY271_Values *I2C_GY271_Value_Pointer;  // This is a pointer to the currently active GY271 sensor. When data is received from this sensor, the function "I2C_GY271_OnDataReceived" will fill this structure with the values from the sensor.
 tVL6180X_Values *I2C_VL6180X_Value_Pointer;  // This is a pointer to the currently active VL6180X sensor. When data is received from this sensor, the function "I2C_VL6180X_OnDataReceived" will fill this structure with the values from the sensor.
-const byte cValue[256] ={0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,
-                        0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1A,0x1B,0x1C,0x1D,0x1E,0x1F,
-                        0x20,0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x29,0x2A,0x2B,0x2C,0x2D,0x2E,0x2F,
-                        0x30,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x3A,0x3B,0x3C,0x3D,0x3E,0x3F,
-                        0x40,0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4A,0x4B,0x4C,0x4D,0x4E,0x4F,
-                        0x50,0x51,0x52,0x53,0x54,0x55,0x56,0x57,0x58,0x59,0x5A,0x5B,0x5C,0x5D,0x5E,0x5F,
-                        0x60,0x61,0x62,0x63,0x64,0x65,0x66,0x67,0x68,0x69,0x6A,0x6B,0x6C,0x6D,0x6E,0x6F,
-                        0x70,0x71,0x72,0x73,0x74,0x75,0x76,0x77,0x78,0x79,0x7A,0x7B,0x7C,0x7D,0x7E,0x7F,
-                        0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87,0x88,0x89,0x8A,0x8B,0x8C,0x8D,0x8E,0x8F,
-                        0x90,0x91,0x92,0x93,0x94,0x95,0x96,0x97,0x98,0x99,0x9A,0x9B,0x9C,0x9D,0x9E,0x9F,
-                        0xA0,0xA1,0xA2,0xA3,0xA4,0xA5,0xA6,0xA7,0xA8,0xA9,0xAA,0xAB,0xAC,0xAD,0xAE,0xAF,
-                        0xB0,0xB1,0xB2,0xB3,0xB4,0xB5,0xB6,0xB7,0xB8,0xB9,0xBA,0xBB,0xBC,0xBD,0xBE,0xBF,
-                        0xC0,0xC1,0xC2,0xC3,0xC4,0xC5,0xC6,0xC7,0xC8,0xC9,0xCA,0xCB,0xCC,0xCD,0xCE,0xCF,
-                        0xD0,0xD1,0xD2,0xD3,0xD4,0xD5,0xD6,0xD7,0xD8,0xD9,0xDA,0xDB,0xDC,0xDD,0xDE,0xDF,
-                        0xE0,0xE1,0xE2,0xE3,0xE4,0xE5,0xE6,0xE7,0xE8,0xE9,0xEA,0xEB,0xEC,0xED,0xEE,0xEF,
-                        0xF0,0xF1,0xF2,0xF3,0xF4,0xF5,0xF6,0xF7,0xF8,0xF9,0xFA,0xFB,0xFC,0xFD,0xFE,0xFF};
+
+/*
+#define p0x07 &cV[0x00];
+#define p0x01 &cV[0x01]
+const byte cV[]={0x07,0x01};
+*/
+byte I2CSendBuffer[10]; // 10 Bytes in the I2C sendbuffer
+byte I2CSendBufferSize=0;
 
 const byte TCA9548A_CHANNEL_0 = 1;
 const byte TCA9548A_CHANNEL_1 = 2;
@@ -301,9 +307,8 @@ const byte TCA9548A_CHANNEL_5 = 32;
 void setup()
 {
   RS232_setup ();
-  //CAN_setup ();
+  CAN_setup ();
   I2C_setup ();
-  Serial.println ("Setup done");
 }
 
 // -----------------------------------------------------------------
@@ -313,7 +318,7 @@ void setup()
 // -----------------------------------------------------------------
 void loop()
 {
-  //CAN_loop ();
+  CAN_loop ();
   RS232_loop ();
   I2C_loop ();
 }
