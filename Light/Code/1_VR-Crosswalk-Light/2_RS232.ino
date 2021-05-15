@@ -150,12 +150,12 @@ void RS232_loop ()
               message.data32 = ODrive.Axis1.EncoderShadowCount;
               RS232_SendMessage (RS232_FRAMEID_ENCODER_AXIS1, message);
               break;
-            case RS232_FRAMEID_ROTATE: // Rotate the device by the given parameter in units
-              ODrive.Axis0.Targetposition = message.data32;
+            case RS232_FRAMEID_ROTATE: // Rotate the device by the given parameter in motor turns
+              ODrive.Axis0.Targetposition = message.dataFloat;
               ODrive.Axis0.ExecuteMovement=true;
               break;
-            case RS232_FRAMEID_MOVE: // Move the device by the given parameter in units
-              ODrive.Axis1.Targetposition = message.data32;
+            case RS232_FRAMEID_MOVE: // Move the device by the given parameter in motor turns
+              ODrive.Axis1.Targetposition = message.dataFloat;
               ODrive.Axis1.ExecuteMovement=true;
               break;
           }

@@ -11,6 +11,8 @@
 // ================================================
 // Note: if you see "// XXX" in the sourcecode, this line is still not finished, need to think about
 
+#include "pins_arduino.h"
+
 // Header files for "ACAN2515":
 #include <ACAN2515.h>
 #include <ACAN2515Settings.h>
@@ -210,6 +212,7 @@ const unsigned int ODRIVE_NODE_ID_AXIS1 = (1) << 5; // Upper 6 bit of the can-bu
 // Here are the identifiers listet:
 const unsigned int CAN_FRAMEID_Heartbeat_Message = 0x001;
 const unsigned int CAN_FRAMEID_Get_Encoder_Count = 0x00A;
+const unsigned int CAN_FRAMEID_Get_Encoder_Estimates = 0x009;
 const unsigned int CAN_FRAMEID_Get_VBus_Voltage = 0x017;
 const unsigned int CAN_FRAMEID_Set_Input_Pos = 0x00C;
 
@@ -222,9 +225,13 @@ typedef struct
   unsigned long AxisCurrentState;
   signed long EncoderShadowCount;
   signed long EncoderCountinCPR;
-  signed long Targetposition;
+  float Degree;   // Current angle in degree of axis0
+  float Distance; // Distance in mm of axis1 from the center
+  float EncoderPosEstimate; // current Motor Position in Turns
+  float Targetposition; // Target Motor Position in Turns
   bool ExecuteMovement;
 } TODriveAxis;
+
 
 // General values from the ODRIVE will be stored in this structur:
 typedef struct
@@ -262,10 +269,17 @@ typedef struct {                    // tGY271_XYZ, contains the measured values 
 // Because each footplate has got six GY271 sensors and six VL6180X sensors,
 // we have to keep 12 sensor values:
 typedef struct {
+  // Sensor stuff:
   tGY271_Values GY271[6];       // This variable will keep the measured values from all six GY271 sensors from one footplate
   tVL6180X_Values VL6180X[6];   // This variable will keep the measured values from all six VL6180X sensors from one footplate
   CI2C::Handle   I2C_HANDLE_TCA9548A_Upper; // Each footplate has got two TCA9548A I2C multiplexer. This one is for the upper one.
   CI2C::Handle   I2C_HANDLE_TCA9548A_Lower; // Each footplate has got two TCA9548A I2C multiplexer. This one is for all lower one.
+  // Stuff for the motor:  
+  volatile bool bEncoderPreviousChannelA;
+  volatile bool bEncoderPreviousChannelB;
+  int Targetposition;
+  bool ExecuteMovement;
+  volatile int iEncoderPosition;
 } TFootplate;
 
 // Because there are two footplates, we have to define both of them. One left and one right one:
@@ -299,6 +313,9 @@ const byte TCA9548A_CHANNEL_3 = 8;
 const byte TCA9548A_CHANNEL_4 = 16;
 const byte TCA9548A_CHANNEL_5 = 32;
 
+// Other global stuff
+bool StartDemoWalking;
+float DemoWalkingSpeed;
 // -----------------------------------------------------------------
 // setup
 // -----------------------------------------------------------------
@@ -306,9 +323,12 @@ const byte TCA9548A_CHANNEL_5 = 32;
 // -----------------------------------------------------------------
 void setup()
 {
+  DemoWalkingSpeed=1.0;
+  StartDemoWalking=false;
+  FootplateMotor_setup ();
   RS232_setup ();
   CAN_setup ();
-  I2C_setup ();
+  // I2C_setup ();
 }
 
 // -----------------------------------------------------------------
@@ -319,6 +339,8 @@ void setup()
 void loop()
 {
   CAN_loop ();
-  RS232_loop ();
-  I2C_loop ();
+  // RS232_loop ();
+  // I2C_loop ();
+  DemoWalking_loop ();
+  FootplateMotor_loop ();
 }

@@ -73,16 +73,23 @@ void CAN_loop ()
         ODrive.Axis1.EncoderShadowCount = message.data32[0];
         ODrive.Axis1.EncoderCountinCPR  = message.data32[1];
         break;
+      case ODRIVE_NODE_ID_AXIS0 + CAN_FRAMEID_Get_Encoder_Estimates: // Encoder position from AXIS0
+        ODrive.Axis0.EncoderPosEstimate = message.dataFloat[0];
+        break;
+      case ODRIVE_NODE_ID_AXIS1 + CAN_FRAMEID_Get_Encoder_Estimates: // Encoder position from AXIS0
+        ODrive.Axis1.EncoderPosEstimate = message.dataFloat[0];
+        break;
       case ODRIVE_NODE_ID_AXIS0 + CAN_FRAMEID_Get_VBus_Voltage:  // Message from ODRIVE with the current power supply voltage
       case ODRIVE_NODE_ID_AXIS1 + CAN_FRAMEID_Get_VBus_Voltage:
         // Message from ODRIVE with its current power supply voltage:
         ODrive.VBus_Voltage = message.dataFloat[0];
         break;
     }
+  }
     // Here comes the send/polling part to ask ODRIVE something:
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     switch (index)  // We ask the ODRIVE each available parameter in a row, we ask all the time the same stuff:
-    {
+    {/*
       case 0: // Ask for the current encoder position of AXIS0 (rotation axis)
         message.id = ODRIVE_NODE_ID_AXIS0 + CAN_FRAMEID_Get_Encoder_Count;
         message.rtr = true;
@@ -101,17 +108,18 @@ void CAN_loop ()
         message.len = 0;
         if (can.tryToSend (message)) index++; 
         break;
+        */
       case 3: // Is there a need to rotate the device?
         if (ODrive.Axis0.ExecuteMovement==true)
         {
-          tempfloat = ODrive.Axis0.Targetposition; // XXX
+          tempfloat = ODrive.Axis0.Targetposition; 
           message.id = ODRIVE_NODE_ID_AXIS0 + CAN_FRAMEID_Set_Input_Pos;
           message.rtr = false;
           message.len = 0x04;
           message.dataFloat[0]=tempfloat; // the desired position, in [turns]
           if (can.tryToSend (message)) 
           {
-            ODrive.Axis0.ExecuteMovement=false;
+            ODrive.Axis0.ExecuteMovement=false; 
             index++; 
           }
         }
@@ -120,7 +128,7 @@ void CAN_loop ()
           index++;
         }
         break;
-      case 4: // Is there a need to move?
+      case 4: // Is there a need to move the device?
         if (ODrive.Axis1.ExecuteMovement==true)
         {
           tempfloat = ODrive.Axis1.Targetposition; // XXX
@@ -130,7 +138,7 @@ void CAN_loop ()
           message.dataFloat[0]=tempfloat; // the desired position, in [turns]
           if (can.tryToSend (message)) 
           {
-            ODrive.Axis1.ExecuteMovement=false;
+            ODrive.Axis1.ExecuteMovement=false; 
             index++; 
           }
         }
@@ -139,9 +147,21 @@ void CAN_loop ()
           index++;
         }
         break;
+      case 5: // AXIS0: Ask for Encoder Estimates
+        message.id = ODRIVE_NODE_ID_AXIS0 + CAN_FRAMEID_Get_Encoder_Estimates;
+        message.rtr = true;
+        message.len = 0;
+        if (can.tryToSend (message)) index++; // Next stuff to ask for, in the next cycle
+        break;
+      case 6: // AXIS1: Ask for Encoder Estimates
+        message.id = ODRIVE_NODE_ID_AXIS1 + CAN_FRAMEID_Get_Encoder_Estimates;
+        message.rtr = true;
+        message.len = 0;
+        if (can.tryToSend (message)) index++; // Next stuff to ask for, in the next cycle
+        break;
+      
       default: // Ups, something went wrong, but we don't care. We just repeat the loop from the beginning (no need to raise an emergency stop)
-        index = 0;
+        index = 3;
         break;
     }
-  }
 }
